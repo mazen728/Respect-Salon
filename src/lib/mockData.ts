@@ -1,7 +1,7 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile } from './types';
 import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap } from 'lucide-react';
-import { fetchBarbersFromFirestore } from './firebase'; // Import the new fetch function
+// Removed: import { fetchBarbersFromFirestore } from './firebase';
 
 type Locale = 'en' | 'ar';
 
@@ -23,21 +23,9 @@ export const generateMockBarbers = (locale: Locale): Barber[] => [
 ];
 
 
-// Updated getMockBarbers to fetch from Firestore with a fallback
-export async function getMockBarbers(locale: Locale): Promise<Barber[]> {
-  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-    console.warn("Firebase project ID not configured. Falling back to local mock barber data.");
-    return generateMockBarbers(locale);
-  }
-
-  const firestoreBarbers = await fetchBarbersFromFirestore(locale);
-  if (firestoreBarbers.length > 0) {
-    console.log(`Fetched ${firestoreBarbers.length} barbers from Firestore for locale: ${locale}`);
-    return firestoreBarbers;
-  } else {
-    console.warn(`No barbers found in Firestore for locale ${locale}, or an error occurred. Falling back to local mock data.`);
-    return generateMockBarbers(locale);
-  }
+// Updated getMockBarbers to use local mock data directly
+export function getMockBarbers(locale: Locale): Barber[] {
+  return generateMockBarbers(locale);
 }
 
 
@@ -51,7 +39,7 @@ export const getMockServices = (locale: Locale): Service[] => [
 ];
 
 
-export const mockAppointments: Appointment[] = [ 
+export const mockAppointments: Appointment[] = [
   { id: 'a1', serviceName: 'Sultan\'s Haircut', barberName: 'Ahmed "The Blade" Al-Fassi', date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), time: '2:00 PM', status: 'Confirmed' },
   { id: 'a2', serviceName: 'Royal Beard Trim', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), time: '11:00 AM', status: 'Completed' },
   { id: 'a3', serviceName: 'Pasha\'s Skin Cleanse', barberName: 'Youssef "The Sculptor" Zaki', date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), time: '4:30 PM', status: 'Pending' },
@@ -62,22 +50,22 @@ export const getMockPromotions = (locale: Locale): Promotion[] => [
   { id: 'p2', title: t({ en: 'New Client Welcome', ar: 'ترحيب بالعميل الجديد' }, locale), description: t({ en: 'First-time customers get 15% off their first service.', ar: 'يحصل العملاء الجدد على خصم 15% على خدمتهم الأولى.' }, locale), imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'barber tools flatlay' },
 ];
 
-export const getMockReviews = (locale: Locale): Review[] => [ 
+export const getMockReviews = (locale: Locale): Review[] => [
   { id: 'r1', customerName: 'Ali Hasan', serviceName: t({en: "Sultan's Haircut", ar: "قصة السلطان"}, locale), barberName: t({en: 'Ahmed "The Blade" Al-Fassi', ar: 'أحمد "الشفرة" الفاسي'}, locale), rating: 5, comment: t({en: 'Best haircut I\'ve had in years! Ahmed is a true artist.', ar: 'أفضل قصة شعر حصلت عليها منذ سنوات! أحمد فنان حقيقي.'}, locale), date: '2024-07-15', avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'happy customer face' },
   { id: 'r2', customerName: 'Omar Sharif', serviceName: t({en: 'Royal Beard Trim', ar: 'تشذيب اللحية الملكي'}, locale), rating: 4, comment: t({en: 'Great attention to detail on the beard trim. The place has a fantastic vibe.', ar: 'اهتمام كبير بالتفاصيل في تشذيب اللحية. المكان يتمتع بأجواء رائعة.'}, locale), date: '2024-07-10', avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'smiling man portrait' },
 ];
 
 export const getMockUserProfile = (locale: Locale): UserProfile => ({
   name: t({ en: 'Valued Customer', ar: 'عميل مميز' }, locale),
-  phone: '035836388', 
-  email: 'customer@example.com', 
+  phone: '035836388',
+  email: 'customer@example.com',
   address: t({ en: '191 Abdel Salam Aref St. - Louran', ar: '191 ش عبد السلام عارف - لوران' }, locale),
-  notifications: { 
+  notifications: {
     appointments: true,
     promotions: true,
     serviceUpdates: false,
   },
-  savedPaymentMethods: [ 
+  savedPaymentMethods: [
     { id: 'pm1', type: 'Visa', last4: '1234', expiry: '12/25' },
     { id: 'pm2', type: 'Apple Pay', last4: 'N/A', expiry: 'N/A' },
   ],
@@ -188,3 +176,5 @@ export const mockServices = getMockServices('en');
 export const mockPromotions = getMockPromotions('en');
 export const mockReviews = getMockReviews('en');
 export const mockUserProfile = getMockUserProfile('en');
+
+    

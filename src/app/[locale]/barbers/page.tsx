@@ -19,8 +19,8 @@ const translations = {
   },
 };
 
-export default async function BarbersPage({ params }: BarbersPageProps) {
-  const mockBarbersData = await getMockBarbers(params.locale); 
+export default function BarbersPage({ params }: BarbersPageProps) { // Removed async
+  const mockBarbersData = getMockBarbers(params.locale); // Call is now synchronous
   const t = translations[params.locale] || translations.en;
 
   return (
@@ -40,3 +40,5 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
     </div>
   );
 }
+
+    
