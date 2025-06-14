@@ -14,7 +14,8 @@ interface HomePageProps {
   params: { locale: Locale };
 }
 
-export default async function HomePage({ params: { locale } }: HomePageProps) {
+export default async function HomePage({ params }: HomePageProps) {
+  const { locale } = params; // Destructure locale from params here
   const salonInfoData = getSalonInfo(locale);
   const mockBarbersData = getMockBarbers(locale);
   const mockPromotionsData = getMockPromotions(locale);
