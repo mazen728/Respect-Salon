@@ -128,8 +128,8 @@ const salonInfoAr: typeof salonInfoEn = {
   name: "صالون رسبيكت",
   address: "123 رويال أفينيو، مدينة فاخرة، LC 45678",
   workingHours: "الاثنين-السبت: 9 صباحًا - 8 مساءً، الأحد: 10 صباحًا - 6 مساءً",
-  phone: "035836388", // Phone numbers usually not translated
-  email: "contact@respectsalon.com", // Emails usually not translated
+  phone: "035836388", 
+  email: "contact@respectsalon.com", 
   whatsappLink: "https://wa.me/035836388",
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },

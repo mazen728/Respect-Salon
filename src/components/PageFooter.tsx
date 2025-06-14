@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { salonInfo as getSalonInfo } from '@/lib/mockData'; // Renamed to avoid conflict
 import { Phone, Mail, MessageSquare } from 'lucide-react';
