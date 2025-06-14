@@ -27,15 +27,8 @@ export default async function HomePage({ params }: HomePageProps) {
       {/* Hero Section */}
       <section className="container mx-auto text-center">
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl">
-          <Image
-            src="https://user-images.githubusercontent.com/20658825/283304157-68c9c250-e8c6-4514-8541-119894ff9b3b.jpg"
-            alt={params.locale === 'ar' ? "شعار صالون رسبيكت" : "Respect Salon Logo"}
-            layout="fill"
-            objectFit="contain"
-            priority
-            data-ai-hint="salon logo R"
-          />
-          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-8">
+          {/* Main background image removed */}
+          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center p-8"> {/* Changed bg-black/50 to bg-black */}
             <Image
               src="https://placehold.co/150x150/FFFFFF/000000.png?text=Logo"
               alt={params.locale === 'ar' ? "شعار إضافي" : "Additional Logo"}
