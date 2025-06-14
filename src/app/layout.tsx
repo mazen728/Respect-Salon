@@ -12,6 +12,7 @@ const getTranslations = (locale: string) => {
       description: 'احجز موعدك في صالون رسبيكت.',
     };
   }
+  // Default to English if locale is not 'ar' or is undefined/invalid
   return {
     title: 'Respect Salon',
     description: 'Book your appointment at Respect Salon.',
@@ -19,7 +20,9 @@ const getTranslations = (locale: string) => {
 };
 
 export async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
-  const t = getTranslations(params.locale);
+  // Fallback to 'en' if params.locale is somehow not provided or is an unexpected value.
+  const currentLocale = (params.locale && ['en', 'ar'].includes(params.locale)) ? params.locale : 'en';
+  const t = getTranslations(currentLocale);
   return {
     title: t.title,
     description: t.description,
@@ -31,22 +34,27 @@ export default function RootLayout({
   params,
 }: Readonly<{
   children: React.ReactNode;
-  params: { locale: string };
+  params: { locale: string }; // params.locale should be provided by Next.js for /[locale] routes
 }>) {
-  const direction = params.locale === 'ar' ? 'rtl' : 'ltr';
+  // Fallback to 'en' if params.locale is somehow not provided or is an unexpected value.
+  // For /[locale] routes, Next.js should ensure params.locale is one of the configured locales.
+  // This primarily guards against unexpected scenarios or rendering contexts (e.g. certain error pages).
+  const currentLocale = (params.locale && ['en', 'ar'].includes(params.locale)) ? params.locale : 'en';
+  const direction = currentLocale === 'ar' ? 'rtl' : 'ltr';
+
   return (
-    <html lang={params.locale} dir={direction}>
+    <html lang={currentLocale} dir={direction}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&family=Noto+Kufi+Arabic:wght@100..900&display=swap" rel="stylesheet" />
       </head>
-      <body className={`font-body antialiased flex flex-col min-h-screen ${params.locale === 'ar' ? 'font-arabic' : ''}`}>
-        <PageHeader locale={params.locale} />
+      <body className={`font-body antialiased flex flex-col min-h-screen ${currentLocale === 'ar' ? 'font-arabic' : ''}`}>
+        <PageHeader locale={currentLocale} />
         <main className="flex-grow">
           {children}
         </main>
-        <PageFooter locale={params.locale} />
+        <PageFooter locale={currentLocale} />
         <Toaster />
       </body>
     </html>
