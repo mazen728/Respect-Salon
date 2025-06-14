@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 10%; /* Dark Gray, from image background */
+    --background: 0 0% 12%; /* Dark Gray, from image background - slightly lighter */
     --foreground: 0 0% 90%; /* Light Gray, for text on dark background */
 
     --card: 0 0% 15%; /* Slightly lighter dark gray for cards */
@@ -51,7 +51,7 @@
   }
 
   .dark {
-    --background: 0 0% 10%; /* Dark Gray, from image background */
+    --background: 0 0% 12%; /* Dark Gray, from image background - slightly lighter */
     --foreground: 0 0% 90%; /* Light Gray, for text on dark background */
 
     --card: 0 0% 15%; /* Slightly lighter dark gray for cards */
