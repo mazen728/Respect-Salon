@@ -28,15 +28,8 @@ export default async function HomePage({ params }: HomePageProps) {
       <section className="container mx-auto text-center">
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl">
           {/* Main background image removed */}
-          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center p-8"> {/* Changed bg-black/50 to bg-black */}
-            <Image
-              src="https://placehold.co/150x150/FFFFFF/000000.png?text=Logo"
-              alt={params.locale === 'ar' ? "شعار إضافي" : "Additional Logo"}
-              width={120}
-              height={120}
-              className="mb-4 rounded-full" 
-              data-ai-hint="salon emblem"
-            />
+          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center p-8"> {/* Ensured bg-black */}
+            {/* Small logo image removed as per request */}
             <h1 className="font-headline text-5xl md:text-7xl font-bold text-white mb-4" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}>
               {salonInfoData.name}
             </h1>
