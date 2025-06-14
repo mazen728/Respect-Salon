@@ -89,7 +89,7 @@ const salonInfoEn = {
   workingHours: "Mon-Sat: 9 AM - 8 PM, Sun: 10 AM - 6 PM",
   phone: "035836388",
   email: "contact@respectsalon.com",
-  whatsappLink: "https://wa.me/035836388",
+  whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
   socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "#", icon: Zap },
@@ -128,9 +128,9 @@ const salonInfoAr: typeof salonInfoEn = {
   name: "صالون رسبيكت",
   address: "123 رويال أفينيو، مدينة فاخرة، LC 45678",
   workingHours: "الاثنين-السبت: 9 صباحًا - 8 مساءً، الأحد: 10 صباحًا - 6 مساءً",
-  phone: "035836388", 
-  email: "contact@respectsalon.com", 
-  whatsappLink: "https://wa.me/035836388",
+  phone: "035836388",
+  email: "contact@respectsalon.com",
+  whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "#", icon: Zap },
