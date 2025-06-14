@@ -7,7 +7,7 @@ import { BarberCard } from '@/components/BarberCard';
 import { PromotionCard } from '@/components/PromotionCard';
 import { ReviewCard } from '@/components/ReviewCard';
 import { salonInfo as getSalonInfo, getMockBarbers, getMockPromotions, getMockReviews } from '@/lib/mockData';
-import { MapPin, Clock, Award, Users, Star } from 'lucide-react';
+import { MapPin, Clock, Award, Users, Star, Scissors } from 'lucide-react';
 import type { Locale } from '@/lib/types';
 
 interface HomePageProps {
@@ -28,12 +28,12 @@ export default async function HomePage({ params }: HomePageProps) {
       <section className="container mx-auto text-center">
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl">
           <Image
-            src="https://placehold.co/1200x500/EAEAEA/333333.png?text=Replace+With+Your+Image"
-            alt={params.locale === 'ar' ? "الصورة الرئيسية الجديدة للصالون" : "New main salon image"}
+            src="https://user-images.githubusercontent.com/20658825/283304157-68c9c250-e8c6-4514-8541-119894ff9b3b.jpg"
+            alt={params.locale === 'ar' ? "شعار صالون رسبيكت" : "Respect Salon Logo"}
             layout="fill"
-            objectFit="cover"
+            objectFit="contain"
             priority
-            data-ai-hint="salon hero"
+            data-ai-hint="salon logo R"
           />
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-8">
             <h1 className="font-headline text-5xl md:text-7xl font-bold text-white mb-4" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}>
