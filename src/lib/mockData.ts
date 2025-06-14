@@ -1,3 +1,4 @@
+
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile } from './types';
 import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, Mail, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap } from 'lucide-react';
 
@@ -86,9 +87,9 @@ const salonInfoEn = {
   name: "Respect Salon",
   address: "123 Royal Avenue, Luxury City, LC 45678",
   workingHours: "Mon-Sat: 9 AM - 8 PM, Sun: 10 AM - 6 PM",
-  phone: "+1 (555) 123-4567",
+  phone: "035836388",
   email: "contact@respectsalon.com",
-  whatsappLink: "https://wa.me/15551234567",
+  whatsappLink: "https://wa.me/035836388",
   socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "#", icon: Zap },
@@ -127,9 +128,9 @@ const salonInfoAr: typeof salonInfoEn = {
   name: "صالون رسبيكت",
   address: "123 رويال أفينيو، مدينة فاخرة، LC 45678",
   workingHours: "الاثنين-السبت: 9 صباحًا - 8 مساءً، الأحد: 10 صباحًا - 6 مساءً",
-  phone: "+1 (555) 123-4567", // Phone numbers usually not translated
+  phone: "035836388", // Phone numbers usually not translated
   email: "contact@respectsalon.com", // Emails usually not translated
-  whatsappLink: "https://wa.me/15551234567",
+  whatsappLink: "https://wa.me/035836388",
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "#", icon: Zap },
@@ -173,3 +174,6 @@ export const mockServices = getMockServices('en');
 export const mockPromotions = getMockPromotions('en');
 export const mockReviews = getMockReviews('en');
 export const mockUserProfile = getMockUserProfile('en');
+
+
+    
