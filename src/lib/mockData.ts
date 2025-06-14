@@ -1,8 +1,8 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile } from './types';
 import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap } from 'lucide-react';
-import { db } from './firebase'; // Import Firestore instance
-import { collection, getDocs, query, where } from 'firebase/firestore';
+// Removed Firestore imports: import { db } from './firebase';
+// Removed Firestore imports: import { collection, getDocs, query, where } from 'firebase/firestore';
 
 type Locale = 'en' | 'ar';
 
@@ -15,7 +15,7 @@ const t = (localizedString: LocalizedString, locale: Locale): string => {
   return localizedString[locale] || localizedString.en;
 };
 
-// This is the original mock data generation logic, kept for fallback and seeding
+// This is the original mock data generation logic
 const generateMockBarbers = (locale: Locale): Barber[] => [
   { id: '1', name: t({ en: 'Ahmed "The Blade" Al-Fassi', ar: 'أحمد "الشفرة" الفاسي' }, locale), imageUrl: 'https://placehold.co/300x300.png', dataAiHint: 'male barber portrait', specialties: [t({en:'Classic Cuts', ar:'قصات كلاسيكية'}, locale), t({en:'Beard Styling', ar:'تصفيف اللحية'}, locale)], rating: 4.8, availability: t({ en: 'Mon-Fri: 10am-7pm', ar: 'الاثنين-الجمعة: 10ص-7م' }, locale) },
   { id: '2', name: t({ en: 'Youssef "The Sculptor" Zaki', ar: 'يوسف "النحات" زكي' }, locale), imageUrl: 'https://placehold.co/300x300.png', dataAiHint: 'barber grooming beard', specialties: [t({en:'Modern Fades', ar:'تدرجات حديثة'}, locale), t({en:'Hot Towel Shaves', ar:'حلاقة بالمنشفة الساخنة'}, locale)], rating: 4.9, availability: t({ en: 'Tue-Sat: 9am-6pm', ar: 'الثلاثاء-السبت: 9ص-6م' }, locale) },
@@ -23,45 +23,10 @@ const generateMockBarbers = (locale: Locale): Barber[] => [
 ];
 
 
-// New function to fetch barbers from Firestore or fallback to mocks
-export const getMockBarbers = async (locale: Locale): Promise<Barber[]> => {
-  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === "YOUR_PROJECT_ID") {
-    // Firebase is not configured, use mock data
-    // console.warn("Firebase Project ID not configured. Falling back to mock barber data.");
-    return generateMockBarbers(locale);
-  }
-
-  try {
-    const barbersCol = collection(db, 'barbers');
-    const q = query(barbersCol, where('locale', '==', locale));
-    const barbersSnapshot = await getDocs(q);
-    
-    const firestoreBarbers: Barber[] = [];
-    barbersSnapshot.forEach((doc) => {
-      const data = doc.data();
-      firestoreBarbers.push({
-        id: doc.id, // Use Firestore document ID
-        name: data.name,
-        imageUrl: data.imageUrl,
-        dataAiHint: data.dataAiHint,
-        specialties: data.specialties,
-        rating: data.rating,
-        availability: data.availability,
-        // originalMockId: data.originalMockId, // This field is mostly for seeding reference
-      } as Barber); // Assert type, assuming Firestore data matches Barber structure for the given locale
-    });
-
-    if (firestoreBarbers.length > 0) {
-      return firestoreBarbers;
-    } else {
-      // No data in Firestore for this locale, fallback to mock data
-      // console.warn(`No barbers found in Firestore for locale '${locale}'. Falling back to mock data.`);
-      return generateMockBarbers(locale);
-    }
-  } catch (error) {
-    console.error("Error fetching barbers from Firestore, falling back to mock data:", error);
-    return generateMockBarbers(locale);
-  }
+// Reverted: Now directly returns mock data without trying Firestore.
+export const getMockBarbers = (locale: Locale): Barber[] => {
+  // console.warn("Firebase Project ID not configured or integration removed. Falling back to mock barber data.");
+  return generateMockBarbers(locale);
 };
 
 
@@ -207,12 +172,9 @@ const salonInfoAr: typeof salonInfoEn = {
 
 export const salonInfo = (locale: Locale) => locale === 'ar' ? salonInfoAr : salonInfoEn;
 
-// For seeding purposes in firebase.ts, we export the original generator
-export { generateMockBarbers as getOriginalMockBarbers };
+// Removed export for seeding: export { generateMockBarbers as getOriginalMockBarbers };
 
-// Keep existing non-localized exports for pages that might not need full localization of this data yet
-// Note: mockBarbers is now async due to Firestore integration
-// export const mockBarbers = getMockBarbers('en'); // This would now be async
+
 export const mockServices = getMockServices('en');
 export const mockPromotions = getMockPromotions('en');
 export const mockReviews = getMockReviews('en');
