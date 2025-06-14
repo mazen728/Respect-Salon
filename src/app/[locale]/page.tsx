@@ -28,12 +28,12 @@ export default async function HomePage({ params }: HomePageProps) {
       <section className="container mx-auto text-center">
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl">
           <Image
-            src="https://placehold.co/1200x500.png"
-            alt={params.locale === 'ar' ? "صالون رسبيكت من الداخل" : "Respect Salon luxury salon interior"}
+            src="https://placehold.co/1200x500/EAEAEA/333333.png?text=Replace+With+Your+Image"
+            alt={params.locale === 'ar' ? "الصورة الرئيسية الجديدة للصالون" : "New main salon image"}
             layout="fill"
             objectFit="cover"
             priority
-            data-ai-hint="luxury salon panoramic"
+            data-ai-hint="salon hero"
           />
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-8">
             <h1 className="font-headline text-5xl md:text-7xl font-bold text-white mb-4" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}>
