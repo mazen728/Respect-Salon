@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ interface HomePageProps {
   params: { locale: Locale };
 }
 
-export default function HomePage({ params: { locale } }: HomePageProps) {
+export default async function HomePage({ params: { locale } }: HomePageProps) {
   const salonInfoData = getSalonInfo(locale);
   const mockBarbersData = getMockBarbers(locale);
   const mockPromotionsData = getMockPromotions(locale);
