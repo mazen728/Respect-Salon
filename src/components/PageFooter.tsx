@@ -2,9 +2,10 @@
 import Link from 'next/link';
 import { salonInfo as getSalonInfo } from '@/lib/mockData'; // Renamed to avoid conflict
 import { Phone, Mail, MessageSquare } from 'lucide-react';
+import type { Locale } from '@/lib/types';
 
 interface PageFooterProps {
-  locale: string;
+  locale: Locale;
 }
 
 export function PageFooter({ locale }: PageFooterProps) {
@@ -36,10 +37,6 @@ export function PageFooter({ locale }: PageFooterProps) {
             <li className="flex items-center justify-center md:justify-start gap-2">
               <Phone className="h-4 w-4" />
               <a href={`tel:${salonInfo.phone}`} className="hover:text-primary transition-colors">{salonInfo.phone}</a>
-            </li>
-            <li className="flex items-center justify-center md:justify-start gap-2">
-              <Mail className="h-4 w-4" />
-              <a href={`mailto:${salonInfo.email}`} className="hover:text-primary transition-colors">{salonInfo.email}</a>
             </li>
             <li className="flex items-center justify-center md:justify-start gap-2">
               <MessageSquare className="h-4 w-4" />
