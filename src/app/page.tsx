@@ -1,5 +1,12 @@
-// This file is deprecated and replaced by src/app/[locale]/page.tsx
-// You can delete this file.
-export default function DeprecatedHomePage() {
-  return null;
+
+import { redirect } from 'next/navigation';
+
+/**
+ * This is the root page.
+ * It redirects to the default locale ('en') as defined in next.config.js.
+ * This file exists to handle the "/" path directly if needed,
+ * especially if it wasn't properly removed after internationalization setup.
+ */
+export default function RootPage() {
+  redirect('/en');
 }
