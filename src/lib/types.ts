@@ -70,7 +70,6 @@ export interface UserProfile {
 }
 
 export interface SalonInfoTranslations {
-  quickLinks: string;
   home: string;
   services: string;
   myAppointments: string;
@@ -88,6 +87,7 @@ export interface SalonInfoTranslations {
   bookAppointment: string;
   viewAllBarbers: string;
   experienceRoyalGrooming: string;
+  ourFeaturedLook: string; // Added new key for featured look section title
 }
 
 export interface SalonInfoData {

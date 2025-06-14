@@ -14,10 +14,10 @@ interface HomePageProps {
   params: { locale: Locale };
 }
 
-export default function HomePage({ params }: HomePageProps) { // Removed async
-  const currentLocale = params.locale; // Use params.locale directly
+export default function HomePage({ params }: HomePageProps) {
+  const currentLocale = params.locale; 
   const salonInfoData = getSalonInfo(currentLocale);
-  const mockBarbersData = getMockBarbers(currentLocale); // Call is now synchronous
+  const mockBarbersData = getMockBarbers(currentLocale); 
   const mockPromotionsData = getMockPromotions(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
@@ -75,6 +75,20 @@ export default function HomePage({ params }: HomePageProps) { // Removed async
           <div className="relative w-full h-80 rounded-lg overflow-hidden shadow-lg">
              <Image src={salonInfoData.locationImage} alt={currentLocale === 'ar' ? "موقع الصالون على الخريطة" : "Salon Map Location"} layout="fill" objectFit="cover" data-ai-hint={salonInfoData.locationDataAiHint}/>
           </div>
+        </div>
+      </section>
+
+      {/* Featured Look Section */}
+      <section className="container mx-auto text-center">
+        <h2 className="font-headline text-3xl font-semibold mb-8 text-primary">{t('ourFeaturedLook')}</h2>
+        <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl mx-auto max-w-4xl">
+          <Image
+            src="https://placehold.co/1000x500.png"
+            alt={params.locale === 'ar' ? "اطلالة مميزة من الصالون" : "Featured look from the salon"}
+            layout="fill"
+            objectFit="cover"
+            data-ai-hint="stylish haircut salon"
+          />
         </div>
       </section>
 
@@ -136,5 +150,3 @@ export default function HomePage({ params }: HomePageProps) { // Removed async
     </div>
   );
 }
-
-    

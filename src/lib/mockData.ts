@@ -1,9 +1,7 @@
 
-import type { Barber, Service, Appointment, Promotion, Review, UserProfile } from './types';
+import type { Barber, Service, Appointment, Promotion, Review, UserProfile, Locale } from './types';
 import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap } from 'lucide-react';
-// Removed: import { fetchBarbersFromFirestore } from './firebase';
 
-type Locale = 'en' | 'ar';
 
 interface LocalizedString {
   en: string;
@@ -71,26 +69,6 @@ export const getMockUserProfile = (locale: Locale): UserProfile => ({
   ],
 });
 
-interface SalonTranslations {
-  home: string;
-  services: string;
-  myAppointments: string;
-  profile: string;
-  contactUs: string;
-  whatsappUs: string;
-  allRightsReserved: string;
-  welcomeToSalon: string;
-  aboutUs: string;
-  salonDescription: string;
-  glimpseOfSalon: string;
-  meetBarbers: string;
-  currentOffers: string;
-  valuedClientsWords: string;
-  bookAppointment: string;
-  viewAllBarbers: string;
-  experienceRoyalGrooming: string;
-}
-
 const salonInfoEn = {
   name: "Respect Salon",
   address: "191 Abdel Salam Aref St. - Louran",
@@ -127,6 +105,7 @@ const salonInfoEn = {
     bookAppointment: "Book Your Appointment",
     viewAllBarbers: "View All Barbers",
     experienceRoyalGrooming: "Experience Royal Grooming",
+    ourFeaturedLook: "Our Featured Look",
   }
 };
 
@@ -166,15 +145,16 @@ const salonInfoAr: typeof salonInfoEn = {
     bookAppointment: "احجز موعدك",
     viewAllBarbers: "عرض كل الحلاقين",
     experienceRoyalGrooming: "جرب العناية الملكية",
+    ourFeaturedLook: "إطلالتنا المميزة",
   }
 };
 
 export const salonInfo = (locale: Locale) => locale === 'ar' ? salonInfoAr : salonInfoEn;
 
 
-export const mockServices = getMockServices('en');
-export const mockPromotions = getMockPromotions('en');
-export const mockReviews = getMockReviews('en');
-export const mockUserProfile = getMockUserProfile('en');
+export const mockServices = getMockServices('en'); // Fallback or default locale for non-localized parts
+export const mockPromotions = getMockPromotions('en'); // Fallback or default
+export const mockReviews = getMockReviews('en'); // Fallback or default
+export const mockUserProfile = getMockUserProfile('en'); // Fallback or default
 
     
