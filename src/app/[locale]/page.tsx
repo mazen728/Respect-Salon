@@ -8,18 +8,18 @@ import { PromotionCard } from '@/components/PromotionCard';
 import { ReviewCard } from '@/components/ReviewCard';
 import { salonInfo as getSalonInfo, getMockBarbers, getMockPromotions, getMockReviews } from '@/lib/mockData';
 import { MapPin, Clock, Award, Users, Star } from 'lucide-react';
-import type { Locale } from '@/lib/types'; // Assuming Locale type is defined
+import type { Locale } from '@/lib/types';
 
 interface HomePageProps {
   params: { locale: Locale };
 }
 
 export default async function HomePage({ params }: HomePageProps) {
-  const { locale } = params; // Destructure locale from params here
-  const salonInfoData = getSalonInfo(locale);
-  const mockBarbersData = getMockBarbers(locale);
-  const mockPromotionsData = getMockPromotions(locale);
-  const mockReviewsData = getMockReviews(locale);
+  // const { locale } = params; // Removed this line
+  const salonInfoData = getSalonInfo(params.locale);
+  const mockBarbersData = getMockBarbers(params.locale);
+  const mockPromotionsData = getMockPromotions(params.locale);
+  const mockReviewsData = getMockReviews(params.locale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
 
 
@@ -30,7 +30,7 @@ export default async function HomePage({ params }: HomePageProps) {
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl">
           <Image 
             src="https://placehold.co/1200x500.png" 
-            alt={locale === 'ar' ? "صالون رسبيكت من الداخل" : "Respect Salon luxury salon interior"}
+            alt={params.locale === 'ar' ? "صالون رسبيكت من الداخل" : "Respect Salon luxury salon interior"}
             layout="fill" 
             objectFit="cover" 
             priority
@@ -44,7 +44,7 @@ export default async function HomePage({ params }: HomePageProps) {
               {t('experienceRoyalGrooming')}
             </p>
             <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-md shadow-lg">
-              <Link href={`/${locale}/services`}>{t('bookAppointment')}</Link>
+              <Link href={`/${params.locale}/services`}>{t('bookAppointment')}</Link>
             </Button>
           </div>
         </div>
@@ -73,7 +73,7 @@ export default async function HomePage({ params }: HomePageProps) {
             </Card>
           </div>
           <div className="relative w-full h-80 rounded-lg overflow-hidden shadow-lg">
-             <Image src={salonInfoData.locationImage} alt={locale === 'ar' ? "موقع الصالون على الخريطة" : "Salon Map Location"} layout="fill" objectFit="cover" data-ai-hint={salonInfoData.locationDataAiHint}/>
+             <Image src={salonInfoData.locationImage} alt={params.locale === 'ar' ? "موقع الصالون على الخريطة" : "Salon Map Location"} layout="fill" objectFit="cover" data-ai-hint={salonInfoData.locationDataAiHint}/>
           </div>
         </div>
       </section>
@@ -98,13 +98,12 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {mockBarbersData.map((barber) => (
-            <BarberCard key={barber.id} barber={barber} locale={locale} />
+            <BarberCard key={barber.id} barber={barber} locale={params.locale} />
           ))}
         </div>
         <div className="text-center mt-8">
           <Button variant="outline" asChild>
-            {/* Assuming a /barbers page, update href if different */}
-            <Link href={`/${locale}/barbers`}>{t('viewAllBarbers')}</Link> 
+            <Link href={`/${params.locale}/barbers`}>{t('viewAllBarbers')}</Link> 
           </Button>
         </div>
       </section>
@@ -117,7 +116,7 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
         <div className="space-y-6">
           {mockPromotionsData.map((promotion) => (
-            <PromotionCard key={promotion.id} promotion={promotion} locale={locale} />
+            <PromotionCard key={promotion.id} promotion={promotion} locale={params.locale} />
           ))}
         </div>
       </section>
@@ -130,7 +129,7 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {mockReviewsData.map((review) => (
-            <ReviewCard key={review.id} review={review} locale={locale} />
+            <ReviewCard key={review.id} review={review} locale={params.locale} />
           ))}
         </div>
       </section>
