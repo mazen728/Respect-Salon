@@ -19,9 +19,9 @@ const translations = {
   },
 };
 
-export default function BarbersPage({ params: { locale } }: BarbersPageProps) {
-  const mockBarbersData = getMockBarbers(locale);
-  const t = translations[locale] || translations.en;
+export default async function BarbersPage({ params }: BarbersPageProps) {
+  const mockBarbersData = await getMockBarbers(params.locale); // Made async
+  const t = translations[params.locale] || translations.en;
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -34,7 +34,7 @@ export default function BarbersPage({ params: { locale } }: BarbersPageProps) {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {mockBarbersData.map((barber) => (
-          <BarberCard key={barber.id} barber={barber} locale={locale} />
+          <BarberCard key={barber.id} barber={barber} locale={params.locale} />
         ))}
       </div>
     </div>

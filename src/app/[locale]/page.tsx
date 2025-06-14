@@ -15,9 +15,9 @@ interface HomePageProps {
 }
 
 export default async function HomePage({ params }: HomePageProps) {
-  // const { locale } = params; // Removed this line
+  // const { locale } = params; // Removed this line as per previous fix
   const salonInfoData = getSalonInfo(params.locale);
-  const mockBarbersData = getMockBarbers(params.locale);
+  const mockBarbersData = await getMockBarbers(params.locale); // Made async
   const mockPromotionsData = getMockPromotions(params.locale);
   const mockReviewsData = getMockReviews(params.locale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];

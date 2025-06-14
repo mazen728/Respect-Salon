@@ -1,6 +1,8 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile } from './types';
-import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, Mail, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap } from 'lucide-react';
+import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap } from 'lucide-react';
+import { db } from './firebase'; // Import Firestore instance
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 type Locale = 'en' | 'ar';
 
@@ -13,12 +15,55 @@ const t = (localizedString: LocalizedString, locale: Locale): string => {
   return localizedString[locale] || localizedString.en;
 };
 
-
-export const getMockBarbers = (locale: Locale): Barber[] => [
+// This is the original mock data generation logic, kept for fallback and seeding
+const generateMockBarbers = (locale: Locale): Barber[] => [
   { id: '1', name: t({ en: 'Ahmed "The Blade" Al-Fassi', ar: 'أحمد "الشفرة" الفاسي' }, locale), imageUrl: 'https://placehold.co/300x300.png', dataAiHint: 'male barber portrait', specialties: [t({en:'Classic Cuts', ar:'قصات كلاسيكية'}, locale), t({en:'Beard Styling', ar:'تصفيف اللحية'}, locale)], rating: 4.8, availability: t({ en: 'Mon-Fri: 10am-7pm', ar: 'الاثنين-الجمعة: 10ص-7م' }, locale) },
   { id: '2', name: t({ en: 'Youssef "The Sculptor" Zaki', ar: 'يوسف "النحات" زكي' }, locale), imageUrl: 'https://placehold.co/300x300.png', dataAiHint: 'barber grooming beard', specialties: [t({en:'Modern Fades', ar:'تدرجات حديثة'}, locale), t({en:'Hot Towel Shaves', ar:'حلاقة بالمنشفة الساخنة'}, locale)], rating: 4.9, availability: t({ en: 'Tue-Sat: 9am-6pm', ar: 'الثلاثاء-السبت: 9ص-6م' }, locale) },
   { id: '3', name: t({ en: 'Khalid "The Precisionist" Ibrahim', ar: 'خالد "الدقيق" ابراهيم' }, locale), imageUrl: 'https://placehold.co/300x300.png', dataAiHint: 'barber working client', specialties: [t({en:'Detailed Beard Trims', ar:'تشذيب لحية دقيق'}, locale), t({en:'Kids Cuts', ar:"قصات أطفال"}, locale)], rating: 4.7, availability: t({ en: 'Wed-Sun: 11am-8pm', ar: 'الأربعاء-الأحد: 11ص-8م' }, locale) },
 ];
+
+
+// New function to fetch barbers from Firestore or fallback to mocks
+export const getMockBarbers = async (locale: Locale): Promise<Barber[]> => {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === "YOUR_PROJECT_ID") {
+    // Firebase is not configured, use mock data
+    // console.warn("Firebase Project ID not configured. Falling back to mock barber data.");
+    return generateMockBarbers(locale);
+  }
+
+  try {
+    const barbersCol = collection(db, 'barbers');
+    const q = query(barbersCol, where('locale', '==', locale));
+    const barbersSnapshot = await getDocs(q);
+    
+    const firestoreBarbers: Barber[] = [];
+    barbersSnapshot.forEach((doc) => {
+      const data = doc.data();
+      firestoreBarbers.push({
+        id: doc.id, // Use Firestore document ID
+        name: data.name,
+        imageUrl: data.imageUrl,
+        dataAiHint: data.dataAiHint,
+        specialties: data.specialties,
+        rating: data.rating,
+        availability: data.availability,
+        // originalMockId: data.originalMockId, // This field is mostly for seeding reference
+      } as Barber); // Assert type, assuming Firestore data matches Barber structure for the given locale
+    });
+
+    if (firestoreBarbers.length > 0) {
+      return firestoreBarbers;
+    } else {
+      // No data in Firestore for this locale, fallback to mock data
+      // console.warn(`No barbers found in Firestore for locale '${locale}'. Falling back to mock data.`);
+      return generateMockBarbers(locale);
+    }
+  } catch (error) {
+    console.error("Error fetching barbers from Firestore, falling back to mock data:", error);
+    return generateMockBarbers(locale);
+  }
+};
+
 
 export const getMockServices = (locale: Locale): Service[] => [
   { id: 's1', name: t({ en: 'Sultan\'s Haircut', ar: 'قصة السلطان' }, locale), price: 50, duration: t({ en: '45 min', ar: '45 دقيقة' }, locale), description: t({ en: 'A royal haircut experience, tailored to your style.', ar: 'تجربة قص شعر ملكية، مصممة خصيصًا لأسلوبك.' }, locale), icon: Scissors },
@@ -30,7 +75,7 @@ export const getMockServices = (locale: Locale): Service[] => [
 ];
 
 
-export const mockAppointments: Appointment[] = [ // Appointments data generally remains in one language for data consistency
+export const mockAppointments: Appointment[] = [ 
   { id: 'a1', serviceName: 'Sultan\'s Haircut', barberName: 'Ahmed "The Blade" Al-Fassi', date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), time: '2:00 PM', status: 'Confirmed' },
   { id: 'a2', serviceName: 'Royal Beard Trim', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), time: '11:00 AM', status: 'Completed' },
   { id: 'a3', serviceName: 'Pasha\'s Skin Cleanse', barberName: 'Youssef "The Sculptor" Zaki', date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), time: '4:30 PM', status: 'Pending' },
@@ -41,29 +86,28 @@ export const getMockPromotions = (locale: Locale): Promotion[] => [
   { id: 'p2', title: t({ en: 'New Client Welcome', ar: 'ترحيب بالعميل الجديد' }, locale), description: t({ en: 'First-time customers get 15% off their first service.', ar: 'يحصل العملاء الجدد على خصم 15% على خدمتهم الأولى.' }, locale), imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'barber tools flatlay' },
 ];
 
-export const getMockReviews = (locale: Locale): Review[] => [ // Customer names and comments are often multilingual or kept in original language
+export const getMockReviews = (locale: Locale): Review[] => [ 
   { id: 'r1', customerName: 'Ali Hasan', serviceName: t({en: "Sultan's Haircut", ar: "قصة السلطان"}, locale), barberName: t({en: 'Ahmed "The Blade" Al-Fassi', ar: 'أحمد "الشفرة" الفاسي'}, locale), rating: 5, comment: t({en: 'Best haircut I\'ve had in years! Ahmed is a true artist.', ar: 'أفضل قصة شعر حصلت عليها منذ سنوات! أحمد فنان حقيقي.'}, locale), date: '2024-07-15', avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'happy customer face' },
   { id: 'r2', customerName: 'Omar Sharif', serviceName: t({en: 'Royal Beard Trim', ar: 'تشذيب اللحية الملكي'}, locale), rating: 4, comment: t({en: 'Great attention to detail on the beard trim. The place has a fantastic vibe.', ar: 'اهتمام كبير بالتفاصيل في تشذيب اللحية. المكان يتمتع بأجواء رائعة.'}, locale), date: '2024-07-10', avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'smiling man portrait' },
 ];
 
 export const getMockUserProfile = (locale: Locale): UserProfile => ({
   name: t({ en: 'Valued Customer', ar: 'عميل مميز' }, locale),
-  phone: '+968 99999999', // Usually not translated
-  email: 'customer@example.com', // Usually not translated
+  phone: '+968 99999999', 
+  email: 'customer@example.com', 
   address: t({ en: '191 Abdel Salam Aref St. - Louran', ar: '191 ش عبد السلام عارف - لوران' }, locale),
-  notifications: { // Boolean flags, labels translated in UI
+  notifications: { 
     appointments: true,
     promotions: true,
     serviceUpdates: false,
   },
-  savedPaymentMethods: [ // Payment details usually not translated
+  savedPaymentMethods: [ 
     { id: 'pm1', type: 'Visa', last4: '1234', expiry: '12/25' },
     { id: 'pm2', type: 'Apple Pay', last4: 'N/A', expiry: 'N/A' },
   ],
 });
 
 interface SalonTranslations {
-  quickLinks: string;
   home: string;
   services: string;
   myAppointments: string;
@@ -88,7 +132,6 @@ const salonInfoEn = {
   address: "191 Abdel Salam Aref St. - Louran",
   workingHours: "Mon-Sat: 9 AM - 8 PM, Sun: 10 AM - 6 PM",
   phone: "035836388",
-  email: "contact@respectsalon.com",
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
   socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
@@ -103,7 +146,6 @@ const salonInfoEn = {
     { url: "https://placehold.co/400x300.png", alt: "Happy Customer", dataAiHint: "customer smiling barber" },
   ],
   translations: {
-    quickLinks: "Quick Links",
     home: "Home",
     services: "Services",
     myAppointments: "My Appointments",
@@ -129,7 +171,6 @@ const salonInfoAr: typeof salonInfoEn = {
   address: "191 ش عبد السلام عارف - لوران",
   workingHours: "الاثنين-السبت: 9 صباحًا - 8 مساءً، الأحد: 10 صباحًا - 6 مساءً",
   phone: "035836388",
-  email: "contact@respectsalon.com",
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
@@ -144,7 +185,6 @@ const salonInfoAr: typeof salonInfoEn = {
     { url: "https://placehold.co/400x300.png", alt: "عميل سعيد", dataAiHint: "customer smiling barber" },
   ],
   translations: {
-    quickLinks: "روابط سريعة",
     home: "الرئيسية",
     services: "الخدمات",
     myAppointments: "مواعيدي",
@@ -167,14 +207,13 @@ const salonInfoAr: typeof salonInfoEn = {
 
 export const salonInfo = (locale: Locale) => locale === 'ar' ? salonInfoAr : salonInfoEn;
 
+// For seeding purposes in firebase.ts, we export the original generator
+export { generateMockBarbers as getOriginalMockBarbers };
+
 // Keep existing non-localized exports for pages that might not need full localization of this data yet
-export const mockBarbers = getMockBarbers('en');
+// Note: mockBarbers is now async due to Firestore integration
+// export const mockBarbers = getMockBarbers('en'); // This would now be async
 export const mockServices = getMockServices('en');
-// export const mockAppointments - already defined, doesn't need localization wrapper
 export const mockPromotions = getMockPromotions('en');
 export const mockReviews = getMockReviews('en');
 export const mockUserProfile = getMockUserProfile('en');
-
-
-    
-    
