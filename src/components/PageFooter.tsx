@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { salonInfo as getSalonInfo } from '@/lib/mockData'; // Renamed to avoid conflict
-import { Phone, Mail, MessageSquare } from 'lucide-react';
+import { Phone, MessageSquare } from 'lucide-react';
 import type { Locale } from '@/lib/types';
 
 interface PageFooterProps {
@@ -16,20 +16,11 @@ export function PageFooter({ locale }: PageFooterProps) {
 
   return (
     <footer className="bg-secondary text-secondary-foreground py-12">
-      <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-start">
+      <div className="container mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 text-center md:text-start">
         <div>
           <h3 className="text-xl font-headline font-semibold mb-4">{salonInfo.name}</h3>
           <p className="text-sm">{salonInfo.address}</p>
           <p className="text-sm mt-2">{salonInfo.workingHours}</p>
-        </div>
-        <div>
-          <h3 className="text-xl font-headline font-semibold mb-4">{t('quickLinks')}</h3>
-          <ul className="space-y-2 text-sm">
-            <li><Link href={`/${locale}/`} className="hover:text-primary transition-colors">{t('home')}</Link></li>
-            <li><Link href={`/${locale}/services`} className="hover:text-primary transition-colors">{t('services')}</Link></li>
-            <li><Link href={`/${locale}/appointments`} className="hover:text-primary transition-colors">{t('myAppointments')}</Link></li>
-            <li><Link href={`/${locale}/profile`} className="hover:text-primary transition-colors">{t('profile')}</Link></li>
-          </ul>
         </div>
         <div>
           <h3 className="text-xl font-headline font-semibold mb-4">{t('contactUs')}</h3>
