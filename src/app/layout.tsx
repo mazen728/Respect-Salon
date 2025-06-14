@@ -5,8 +5,8 @@ import { PageFooter } from '@/components/PageFooter';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'The Sultan\'s Chair',
-  description: 'Book your appointment at The Sultan\'s Chair barber salon.',
+  title: 'Respect Salon',
+  description: 'Book your appointment at Respect Salon.',
 };
 
 export default function RootLayout({

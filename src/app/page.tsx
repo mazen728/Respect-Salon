@@ -16,7 +16,7 @@ export default function HomePage() {
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl">
           <Image 
             src="https://placehold.co/1200x500.png" 
-            alt="The Sultan's Chair luxury salon interior" 
+            alt="Respect Salon luxury salon interior" 
             layout="fill" 
             objectFit="cover" 
             priority
@@ -46,7 +46,7 @@ export default function HomePage() {
                 <CardTitle className="font-headline text-xl">About Us</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-foreground/80">
-                <p>Step into a realm of unparalleled luxury and tradition at The Sultan's Chair. We offer a sanctuary where classic barbering artistry meets modern sophistication. Our master barbers are dedicated to providing you with an exceptional grooming experience, tailored to your unique style.</p>
+                <p>Step into a realm of unparalleled luxury and tradition at {salonInfo.name}. We offer a sanctuary where classic barbering artistry meets modern sophistication. Our master barbers are dedicated to providing you with an exceptional grooming experience, tailored to your unique style.</p>
                 <div className="flex items-start space-x-3 pt-2">
                   <MapPin className="h-5 w-5 mt-1 text-accent shrink-0" />
                   <span>{salonInfo.address}</span>
@@ -112,7 +112,7 @@ export default function HomePage() {
       <section className="container mx-auto">
         <div className="flex items-center justify-center mb-8 space-x-3">
             <Star className="h-10 w-10 text-accent" />
-            <h2 className="font-headline text-3xl font-semibold text-primary">Words From Our Valued Sultans</h2>
+            <h2 className="font-headline text-3xl font-semibold text-primary">Words From Our Valued Clients</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {mockReviews.map((review) => (

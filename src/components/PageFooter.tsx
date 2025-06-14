@@ -9,7 +9,7 @@ export function PageFooter() {
     <footer className="bg-secondary text-secondary-foreground py-12">
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
         <div>
-          <h3 className="text-xl font-headline font-semibold mb-4">The Sultan's Chair</h3>
+          <h3 className="text-xl font-headline font-semibold mb-4">{salonInfo.name}</h3>
           <p className="text-sm">{salonInfo.address}</p>
           <p className="text-sm mt-2">{salonInfo.workingHours}</p>
         </div>

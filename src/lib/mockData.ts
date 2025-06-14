@@ -24,7 +24,7 @@ export const mockAppointments: Appointment[] = [
 
 export const mockPromotions: Promotion[] = [
   { id: 'p1', title: 'Mid-Week Majesty', description: '20% off all services on Wednesdays!', couponCode: 'WEDNESDAY20', imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'salon interior promotion' },
-  { id: 'p2', title: 'New Sultan Welcome', description: 'First-time customers get 15% off their first service.', imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'barber tools flatlay' },
+  { id: 'p2', title: 'New Client Welcome', description: 'First-time customers get 15% off their first service.', imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'barber tools flatlay' },
 ];
 
 export const mockReviews: Review[] = [
@@ -34,10 +34,10 @@ export const mockReviews: Review[] = [
 ];
 
 export const mockUserProfile: UserProfile = {
-  name: 'Sultan Qaboos',
+  name: 'Valued Customer',
   phone: '+968 99999999',
-  email: 'sultan@example.com',
-  address: 'Al Alam Palace, Muscat, Oman',
+  email: 'customer@example.com',
+  address: '1 Royal Palace, Capital City',
   notifications: {
     appointments: true,
     promotions: true,
@@ -50,11 +50,11 @@ export const mockUserProfile: UserProfile = {
 };
 
 export const salonInfo = {
-  name: "The Sultan's Chair",
+  name: "Respect Salon",
   address: "123 Royal Avenue, Luxury City, LC 45678",
   workingHours: "Mon-Sat: 9 AM - 8 PM, Sun: 10 AM - 6 PM",
   phone: "+1 (555) 123-4567",
-  email: "contact@sultanschair.com",
+  email: "contact@respectsalon.com",
   whatsappLink: "https://wa.me/15551234567",
   socialMedia: [
     { name: "Instagram", url: "#", icon: Zap /* Placeholder, use specific if available */ },

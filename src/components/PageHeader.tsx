@@ -16,7 +16,7 @@ export function PageHeader() {
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
         <Link href="/" className="flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors">
           <Scissors className="h-8 w-8" />
-          <span className="font-headline text-2xl font-bold">The Sultan's Chair</span>
+          <span className="font-headline text-2xl font-bold">Respect Salon</span>
         </Link>
         
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
@@ -43,7 +43,7 @@ export function PageHeader() {
               <nav className="grid gap-6 text-lg font-medium mt-8">
                 <Link href="/" className="flex items-center space-x-2 text-primary mb-4">
                   <Scissors className="h-7 w-7" />
-                  <span className="font-headline text-xl font-bold">The Sultan's Chair</span>
+                  <span className="font-headline text-xl font-bold">Respect Salon</span>
                 </Link>
                 {navItems.map((item) => (
                   <Link
