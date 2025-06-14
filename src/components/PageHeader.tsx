@@ -27,7 +27,7 @@ export function PageHeader({ locale }: PageHeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-      <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
+      <div className="container mx-auto px-6 flex h-16 max-w-screen-2xl items-center justify-between">
         <Link href={`/${locale}`} className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors">
           <Scissors className="h-8 w-8" />
           <span className="font-headline text-2xl font-bold">{salonName}</span>
