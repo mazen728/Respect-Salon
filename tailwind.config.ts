@@ -12,6 +12,7 @@ export default {
       fontFamily: {
         body: ['Alegreya', 'serif'],
         headline: ['Alegreya', 'serif'],
+        arabic: ['Noto Kufi Arabic', 'Alegreya', 'serif'], // Added Arabic font
         code: ['monospace'],
       },
       colors: {
