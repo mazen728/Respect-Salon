@@ -36,6 +36,14 @@ export default async function HomePage({ params }: HomePageProps) {
             data-ai-hint="salon logo R"
           />
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-8">
+            <Image
+              src="https://placehold.co/150x150/FFFFFF/000000.png?text=Logo"
+              alt={params.locale === 'ar' ? "شعار إضافي" : "Additional Logo"}
+              width={120}
+              height={120}
+              className="mb-4 rounded-full" 
+              data-ai-hint="salon emblem"
+            />
             <h1 className="font-headline text-5xl md:text-7xl font-bold text-white mb-4" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}>
               {salonInfoData.name}
             </h1>
@@ -76,7 +84,7 @@ export default async function HomePage({ params }: HomePageProps) {
           </div>
         </div>
       </section>
-
+      
       {/* Featured Look Section */}
       <section className="container mx-auto text-center">
         <h2 className="font-headline text-3xl font-semibold mb-8 text-primary">{t('ourFeaturedLook')}</h2>
