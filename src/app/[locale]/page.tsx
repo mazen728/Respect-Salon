@@ -14,7 +14,7 @@ interface HomePageProps {
   params: { locale: Locale };
 }
 
-export default function HomePage({ params }: HomePageProps) {
+export default async function HomePage({ params }: HomePageProps) {
   const currentLocale = params.locale; 
   const salonInfoData = getSalonInfo(currentLocale);
   const mockBarbersData = getMockBarbers(currentLocale); 
@@ -84,7 +84,7 @@ export default function HomePage({ params }: HomePageProps) {
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl mx-auto max-w-4xl">
           <Image
             src="https://placehold.co/1000x500.png"
-            alt={params.locale === 'ar' ? "اطلالة مميزة من الصالون" : "Featured look from the salon"}
+            alt={currentLocale === 'ar' ? "اطلالة مميزة من الصالون" : "Featured look from the salon"}
             layout="fill"
             objectFit="cover"
             data-ai-hint="stylish haircut salon"
