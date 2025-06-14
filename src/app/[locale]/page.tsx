@@ -15,9 +15,9 @@ interface HomePageProps {
 }
 
 export default async function HomePage({ params }: HomePageProps) {
-  const currentLocale = params.locale; 
+  const currentLocale = params.locale;
   const salonInfoData = getSalonInfo(currentLocale);
-  const mockBarbersData = getMockBarbers(currentLocale); 
+  const mockBarbersData = getMockBarbers(currentLocale);
   const mockPromotionsData = getMockPromotions(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
@@ -37,16 +37,6 @@ export default async function HomePage({ params }: HomePageProps) {
             data-ai-hint="luxury salon panoramic"
           />
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-8">
-            <div className="mb-4">
-              <Image
-                src="https://placehold.co/150x150.png"
-                alt={currentLocale === 'ar' ? "شعار الصالون" : "Salon Logo"}
-                width={150}
-                height={150}
-                className="rounded-full shadow-md"
-                data-ai-hint="salon logo"
-              />
-            </div>
             <h1 className="font-headline text-5xl md:text-7xl font-bold text-white mb-4" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}>
               {salonInfoData.name}
             </h1>
