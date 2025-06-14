@@ -50,7 +50,7 @@ export const getMockUserProfile = (locale: Locale): UserProfile => ({
   name: t({ en: 'Valued Customer', ar: 'عميل مميز' }, locale),
   phone: '+968 99999999', // Usually not translated
   email: 'customer@example.com', // Usually not translated
-  address: t({ en: '1 Royal Palace, Capital City', ar: '1 القصر الملكي، العاصمة' }, locale),
+  address: t({ en: '191 Abdel Salam Aref St. - Louran', ar: '191 ش عبد السلام عارف - لوران' }, locale),
   notifications: { // Boolean flags, labels translated in UI
     appointments: true,
     promotions: true,
@@ -85,7 +85,7 @@ interface SalonTranslations {
 
 const salonInfoEn = {
   name: "Respect Salon",
-  address: "123 Royal Avenue, Luxury City, LC 45678",
+  address: "191 Abdel Salam Aref St. - Louran",
   workingHours: "Mon-Sat: 9 AM - 8 PM, Sun: 10 AM - 6 PM",
   phone: "035836388",
   email: "contact@respectsalon.com",
@@ -126,7 +126,7 @@ const salonInfoEn = {
 
 const salonInfoAr: typeof salonInfoEn = {
   name: "صالون رسبيكت",
-  address: "123 رويال أفينيو، مدينة فاخرة، LC 45678",
+  address: "191 ش عبد السلام عارف - لوران",
   workingHours: "الاثنين-السبت: 9 صباحًا - 8 مساءً، الأحد: 10 صباحًا - 6 مساءً",
   phone: "035836388",
   email: "contact@respectsalon.com",
@@ -176,4 +176,5 @@ export const mockReviews = getMockReviews('en');
 export const mockUserProfile = getMockUserProfile('en');
 
 
+    
     
