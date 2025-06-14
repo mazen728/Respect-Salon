@@ -1,8 +1,7 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile } from './types';
 import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap } from 'lucide-react';
-// Removed Firestore imports: import { db } from './firebase';
-// Removed Firestore imports: import { collection, getDocs, query, where } from 'firebase/firestore';
+import { fetchBarbersFromFirestore } from './firebase'; // Import the new fetch function
 
 type Locale = 'en' | 'ar';
 
@@ -15,19 +14,31 @@ const t = (localizedString: LocalizedString, locale: Locale): string => {
   return localizedString[locale] || localizedString.en;
 };
 
-// This is the original mock data generation logic
-const generateMockBarbers = (locale: Locale): Barber[] => [
+// This is the original mock data generation logic, now named to avoid conflict
+// and used as a fallback and for seeding.
+export const generateMockBarbers = (locale: Locale): Barber[] => [
   { id: '1', name: t({ en: 'Ahmed "The Blade" Al-Fassi', ar: 'أحمد "الشفرة" الفاسي' }, locale), imageUrl: 'https://placehold.co/300x300.png', dataAiHint: 'male barber portrait', specialties: [t({en:'Classic Cuts', ar:'قصات كلاسيكية'}, locale), t({en:'Beard Styling', ar:'تصفيف اللحية'}, locale)], rating: 4.8, availability: t({ en: 'Mon-Fri: 10am-7pm', ar: 'الاثنين-الجمعة: 10ص-7م' }, locale) },
   { id: '2', name: t({ en: 'Youssef "The Sculptor" Zaki', ar: 'يوسف "النحات" زكي' }, locale), imageUrl: 'https://placehold.co/300x300.png', dataAiHint: 'barber grooming beard', specialties: [t({en:'Modern Fades', ar:'تدرجات حديثة'}, locale), t({en:'Hot Towel Shaves', ar:'حلاقة بالمنشفة الساخنة'}, locale)], rating: 4.9, availability: t({ en: 'Tue-Sat: 9am-6pm', ar: 'الثلاثاء-السبت: 9ص-6م' }, locale) },
   { id: '3', name: t({ en: 'Khalid "The Precisionist" Ibrahim', ar: 'خالد "الدقيق" ابراهيم' }, locale), imageUrl: 'https://placehold.co/300x300.png', dataAiHint: 'barber working client', specialties: [t({en:'Detailed Beard Trims', ar:'تشذيب لحية دقيق'}, locale), t({en:'Kids Cuts', ar:"قصات أطفال"}, locale)], rating: 4.7, availability: t({ en: 'Wed-Sun: 11am-8pm', ar: 'الأربعاء-الأحد: 11ص-8م' }, locale) },
 ];
 
 
-// Reverted: Now directly returns mock data without trying Firestore.
-export const getMockBarbers = (locale: Locale): Barber[] => {
-  // console.warn("Firebase Project ID not configured or integration removed. Falling back to mock barber data.");
-  return generateMockBarbers(locale);
-};
+// Updated getMockBarbers to fetch from Firestore with a fallback
+export async function getMockBarbers(locale: Locale): Promise<Barber[]> {
+  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+    console.warn("Firebase project ID not configured. Falling back to local mock barber data.");
+    return generateMockBarbers(locale);
+  }
+
+  const firestoreBarbers = await fetchBarbersFromFirestore(locale);
+  if (firestoreBarbers.length > 0) {
+    console.log(`Fetched ${firestoreBarbers.length} barbers from Firestore for locale: ${locale}`);
+    return firestoreBarbers;
+  } else {
+    console.warn(`No barbers found in Firestore for locale ${locale}, or an error occurred. Falling back to local mock data.`);
+    return generateMockBarbers(locale);
+  }
+}
 
 
 export const getMockServices = (locale: Locale): Service[] => [
@@ -58,7 +69,7 @@ export const getMockReviews = (locale: Locale): Review[] => [
 
 export const getMockUserProfile = (locale: Locale): UserProfile => ({
   name: t({ en: 'Valued Customer', ar: 'عميل مميز' }, locale),
-  phone: '+968 99999999', 
+  phone: '035836388', 
   email: 'customer@example.com', 
   address: t({ en: '191 Abdel Salam Aref St. - Louran', ar: '191 ش عبد السلام عارف - لوران' }, locale),
   notifications: { 
@@ -171,8 +182,6 @@ const salonInfoAr: typeof salonInfoEn = {
 };
 
 export const salonInfo = (locale: Locale) => locale === 'ar' ? salonInfoAr : salonInfoEn;
-
-// Removed export for seeding: export { generateMockBarbers as getOriginalMockBarbers };
 
 
 export const mockServices = getMockServices('en');

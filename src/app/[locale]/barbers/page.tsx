@@ -19,9 +19,8 @@ const translations = {
   },
 };
 
-// Changed from async to sync function
-export default function BarbersPage({ params }: BarbersPageProps) {
-  const mockBarbersData = getMockBarbers(params.locale); // Call is now synchronous
+export default async function BarbersPage({ params }: BarbersPageProps) {
+  const mockBarbersData = await getMockBarbers(params.locale); 
   const t = translations[params.locale] || translations.en;
 
   return (

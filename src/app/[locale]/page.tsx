@@ -15,11 +15,11 @@ interface HomePageProps {
 }
 
 export default async function HomePage({ params }: HomePageProps) {
-  const { locale } = params; // Destructure locale from params here
-  const salonInfoData = getSalonInfo(locale);
-  const mockBarbersData = getMockBarbers(locale); // Call is now synchronous, removed await
-  const mockPromotionsData = getMockPromotions(locale);
-  const mockReviewsData = getMockReviews(locale);
+  // Destructure locale from params here
+  const salonInfoData = getSalonInfo(params.locale);
+  const mockBarbersData = await getMockBarbers(params.locale); // Call is now asynchronous
+  const mockPromotionsData = getMockPromotions(params.locale);
+  const mockReviewsData = getMockReviews(params.locale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
 
 
