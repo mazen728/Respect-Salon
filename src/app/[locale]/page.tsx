@@ -29,15 +29,16 @@ export default async function HomePage({ params }: HomePageProps) {
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl">
           {/* Main background image removed */}
           <div className="absolute inset-0 bg-black flex flex-col items-center justify-center p-8"> {/* Ensured bg-black */}
-            {/* Placeholder for Logo */}
+            {/* Logo */}
             <div className="mb-6">
               <Image
-                src="https://placehold.co/150x150/FFFFFF/111111.png?text=LOGO"
-                alt={params.locale === 'ar' ? "شعار الصالون" : "Salon Logo"}
-                width={120}
-                height={120}
-                className="rounded-full object-contain"
-                data-ai-hint="brand logo"
+                src="/images/salon-logo.png" 
+                alt={params.locale === 'ar' ? "شعار صالون رسبيكت" : "Respect Salon Logo"}
+                width={160} 
+                height={152} 
+                className="object-contain"
+                data-ai-hint="salon logo R" 
+                priority
               />
             </div>
             <h1 className="font-headline text-5xl md:text-7xl font-bold text-white mb-4" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.7)' }}>
