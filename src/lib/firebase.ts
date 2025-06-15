@@ -2,16 +2,20 @@
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
 import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc } from 'firebase/firestore';
+import { getAnalytics, isSupported } from "firebase/analytics";
 import type { Barber, Locale } from './types';
 import { generateMockBarbers as getOriginalMockBarbers } from './mockData'; // Renamed to avoid conflict for seeding
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig: FirebaseOptions = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyCPGb7DJyT6q6Ij2xRFv-If8cFnr-eRf3w",
+  authDomain: "respect-salon1.firebaseapp.com",
+  projectId: "respect-salon1",
+  storageBucket: "respect-salon1.firebasestorage.app",
+  messagingSenderId: "111339803449",
+  appId: "1:111339803449:web:a3dda7848f655d7b230ee8",
+  measurementId: "G-T4Q7F23EG4"
 };
 
 // Initialize Firebase
@@ -24,12 +28,22 @@ if (!getApps().length) {
 
 const db = getFirestore(app);
 
-export { db };
+// Initialize Firebase Analytics if supported (runs only in browser)
+let analytics;
+if (typeof window !== 'undefined') {
+  isSupported().then((supported) => {
+    if (supported) {
+      analytics = getAnalytics(app);
+    }
+  });
+}
+
+export { db, analytics };
 
 // Function to fetch barbers from Firestore
 export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[]> {
-  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-    console.warn("Firebase project ID not configured. Firestore fetch skipped for barbers.");
+  if (!firebaseConfig.projectId) {
+    console.warn("Firebase project ID not configured in firebaseConfig. Firestore fetch skipped for barbers.");
     return []; // Return empty or handle as an error, then fallback in calling function
   }
   try {
@@ -73,8 +87,8 @@ export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[
 
 // Basic seeding function for Barbers data
 export async function seedBarbersData(): Promise<string> {
-  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-    return "Firebase project ID not configured. Seeding skipped.";
+  if (!firebaseConfig.projectId) {
+    return "Firebase project ID not configured in firebaseConfig. Seeding skipped.";
   }
   try {
     const barbersRef = collection(db, 'barbers');
