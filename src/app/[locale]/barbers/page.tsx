@@ -38,7 +38,7 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
     } else {
       // If Firestore returns empty (e.g., no data seeded or locale specific data missing),
       // fall back to mock data for demonstration purposes.
-      console.warn(\`No barbers found in Firestore for locale: \${params.locale}. Falling back to mock data.\`);
+      console.warn(`No barbers found in Firestore for locale: ${params.locale}. Falling back to mock data.`);
       barbers = getMockBarbers(params.locale);
     }
   } catch (error) {
