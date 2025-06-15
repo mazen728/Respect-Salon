@@ -1,8 +1,9 @@
 
 import Link from 'next/link';
+import Image from 'next/image'; // Import next/image
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet'; // Added SheetClose
-import { Menu, Scissors } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react'; // Scissors removed from lucide-react imports
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface NavItem {
@@ -30,7 +31,14 @@ export function PageHeader({ locale }: PageHeaderProps) {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container mx-auto px-6 flex h-16 max-w-screen-2xl items-center justify-between">
         <Link href={`/${locale}`} className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors">
-          <Scissors className="h-8 w-8" />
+          <Image
+            src="https://i.postimg.cc/tgyg008Z/FB-IMG-1749942810921.jpg"
+            alt={locale === 'ar' ? 'شعار صالون رسبيكت' : 'Respect Salon Logo'}
+            width={32} // h-8 w-8 roughly translates to 32px
+            height={32} // h-8 w-8 roughly translates to 32px
+            className="object-contain" // Ensures the image fits without cropping, maintaining aspect ratio
+            data-ai-hint="salon logo icon"
+          />
           <span className="font-headline text-2xl font-bold">{salonName}</span>
         </Link>
         
@@ -59,7 +67,14 @@ export function PageHeader({ locale }: PageHeaderProps) {
                 <nav className="grid gap-6 text-lg font-medium mt-8">
                   <SheetClose asChild>
                     <Link href={`/${locale}`} className="flex items-center gap-2 text-primary mb-4">
-                      <Scissors className="h-7 w-7" />
+                       <Image
+                        src="https://i.postimg.cc/tgyg008Z/FB-IMG-1749942810921.jpg"
+                        alt={locale === 'ar' ? 'شعار صالون رسبيكت' : 'Respect Salon Logo'}
+                        width={28} // Slightly smaller for mobile menu
+                        height={28}
+                        className="object-contain"
+                        data-ai-hint="salon logo icon"
+                      />
                       <span className="font-headline text-xl font-bold">{salonName}</span>
                     </Link>
                   </SheetClose>
