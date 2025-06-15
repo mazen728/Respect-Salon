@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { PageHeader } from '@/components/PageHeader';
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: { params: { locale: string } 
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({ // Made this function async
   children,
   params,
 }: Readonly<{
