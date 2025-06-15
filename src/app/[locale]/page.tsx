@@ -32,12 +32,12 @@ export default async function HomePage({ params }: HomePageProps) {
             {/* Logo */}
             <div className="mb-6">
               <Image
-                src="/images/salon-logo.png" 
+                src="https://i.postimg.cc/xCBD2Mqx/respect-salon-150x150.png"
                 alt={params.locale === 'ar' ? "شعار صالون رسبيكت" : "Respect Salon Logo"}
-                width={160} 
-                height={152} 
+                width={150}
+                height={150}
                 className="object-contain"
-                data-ai-hint="salon logo R" 
+                data-ai-hint="salon logo R"
                 priority
               />
             </div>

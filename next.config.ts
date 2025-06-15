@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
         hostname: 'user-images.githubusercontent.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.postimg.cc',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
