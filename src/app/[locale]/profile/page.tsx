@@ -1,8 +1,10 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useParams } from 'next/navigation'; // Import useParams
 import { getMockUserProfile } from '@/lib/mockData';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +15,10 @@ import { toast } from "@/hooks/use-toast";
 import { User, KeyRound, Bell, CreditCard, Save } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 
-interface ProfilePageProps {
-  params: { locale: Locale };
-}
+// Removed params from props interface
+// interface ProfilePageProps {
+//   params: { locale: Locale };
+// }
 
 const translations = {
   en: {
@@ -60,6 +63,7 @@ const translations = {
     phoneMin: "Phone number seems too short.",
     phoneMax: "Phone number seems too long.",
     passwordMin: "New password must be at least 8 characters.",
+    loading: "Loading profile...",
   },
   ar: {
     pageTitle: "ملفك الشخصي الملكي",
@@ -103,11 +107,19 @@ const translations = {
     phoneMin: "رقم الهاتف يبدو قصيرًا جدًا.",
     phoneMax: "رقم الهاتف يبدو طويلًا جدًا.",
     passwordMin: "يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل.",
+    loading: "جار تحميل الملف الشخصي...",
   }
 };
 
 
-export default function ProfilePage({ params: { locale } }: ProfilePageProps) {
+export default function ProfilePage() {
+  const routeParams = useParams();
+  const locale = routeParams.locale as Locale;
+
+  if (!locale || (locale !== 'en' && locale !== 'ar')) {
+    return <div>Loading page...</div>;
+  }
+
   const t = translations[locale];
   const mockUserProfile = getMockUserProfile(locale);
 

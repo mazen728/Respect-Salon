@@ -1,17 +1,20 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
+import { useParams } from 'next/navigation'; // Import useParams
 import { AppointmentCard } from '@/components/AppointmentCard';
-import { mockAppointments } from '@/lib/mockData'; // This mock data is not localized yet, for simplicity
+import { mockAppointments } from '@/lib/mockData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from '@/components/ui/button'; // Added Button
-import Link from 'next/link'; // Added Link
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { CalendarDays, History } from 'lucide-react';
 import type { Appointment, Locale } from '@/lib/types';
 
-interface AppointmentsPageProps {
-  params: { locale: Locale };
-}
+// Removed params from props interface, as useParams will be used.
+// interface AppointmentsPageProps {
+//   params: { locale: Locale };
+// }
 
 const pageTranslations = {
   en: {
@@ -36,8 +39,19 @@ const pageTranslations = {
   }
 };
 
-export default function AppointmentsPage({ params: { locale } }: AppointmentsPageProps) {
+export default function AppointmentsPage() {
+  const routeParams = useParams();
+  const locale = routeParams.locale as Locale; // Assuming locale is always a string 'en' or 'ar'
+
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
+
+  // Fallback if locale is not immediately available or invalid, though middleware should handle this.
+  if (!locale || (locale !== 'en' && locale !== 'ar')) {
+    // Render a loading state or default content if locale is not valid
+    // This situation should ideally be prevented by routing/middleware
+    return <div>Loading page...</div>;
+  }
+
   const t = pageTranslations[locale];
 
   const upcomingAppointments = useMemo(() => {

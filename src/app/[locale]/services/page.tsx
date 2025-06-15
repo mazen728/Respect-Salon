@@ -1,15 +1,18 @@
+
 "use client"; 
 
 import { useState } from 'react';
+import { useParams } from 'next/navigation'; // Import useParams
 import { ServiceCard } from '@/components/ServiceCard';
 import { AiSuggestions } from '@/components/AiSuggestions';
 import { getMockServices } from '@/lib/mockData';
 import { ListChecks, Wand2 } from 'lucide-react';
 import type { Locale } from '@/lib/types';
 
-interface ServicesPageProps {
-  params: { locale: Locale };
-}
+// Removed params from props interface
+// interface ServicesPageProps {
+//   params: { locale: Locale };
+// }
 
 const pageTranslations = {
   en: {
@@ -26,8 +29,16 @@ const pageTranslations = {
   }
 };
 
-export default function ServicesPage({ params: { locale } }: ServicesPageProps) {
+export default function ServicesPage() {
+  const routeParams = useParams();
+  const locale = routeParams.locale as Locale; // Assuming locale is always 'en' or 'ar'
+
   const [selectedServiceForAI, setSelectedServiceForAI] = useState<string | null>(null);
+  
+  if (!locale || (locale !== 'en' && locale !== 'ar')) {
+    return <div>Loading page...</div>;
+  }
+  
   const mockServices = getMockServices(locale);
   const t = pageTranslations[locale];
 
