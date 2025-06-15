@@ -1,8 +1,11 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Appointment, Locale } from '@/lib/types';
 import { CalendarDays, Clock, User, Tag, CheckCircle, XCircle, AlertTriangle, RefreshCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface AppointmentCardProps {
   appointment: Appointment;
@@ -44,6 +47,12 @@ export function AppointmentCard({ appointment, locale }: AppointmentCardProps) {
   const t = translations[locale];
   const tStatus = (statusKey: Appointment['status']) => t.status[statusKey] || statusKey;
 
+  const [isPast, setIsPast] = useState(false);
+
+  useEffect(() => {
+    setIsPast(new Date(appointment.date) < new Date() && appointment.status !== 'Pending' && appointment.status !== 'Confirmed');
+  }, [appointment.date, appointment.status]);
+
 
   const getStatusBadgeVariant = (status: Appointment['status']) => {
     switch (status) {
@@ -65,9 +74,6 @@ export function AppointmentCard({ appointment, locale }: AppointmentCardProps) {
       default: return null;
     }
   };
-
-  const isPastAppointment = new Date(appointment.date) < new Date() && appointment.status !== 'Pending' && appointment.status !== 'Confirmed';
-
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -98,19 +104,19 @@ export function AppointmentCard({ appointment, locale }: AppointmentCardProps) {
         )}
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-2">
-        {(appointment.status === 'Confirmed' || appointment.status === 'Pending') && !isPastAppointment && (
+        {(appointment.status === 'Confirmed' || appointment.status === 'Pending') && !isPast && (
           <>
             <Button variant="outline" size="sm">{t.modify}</Button>
             <Button variant="destructive" size="sm">{t.cancel}</Button>
           </>
         )}
-        {isPastAppointment && appointment.status === 'Completed' && (
+        {isPast && appointment.status === 'Completed' && (
              <Button variant="default" size="sm" className="w-full sm:w-auto">
                 <RefreshCcw className={`h-4 w-4 ${locale === 'ar' ? 'ms-2' : 'me-2'}`}/>
                 {t.rebookService}
             </Button>
         )}
-         {isPastAppointment && appointment.status === 'Completed' && (
+         {isPast && appointment.status === 'Completed' && (
              <Button variant="outline" size="sm" className="w-full sm:w-auto">{t.leaveReview}</Button>
         )}
       </CardFooter>

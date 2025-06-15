@@ -1,8 +1,11 @@
+"use client";
+
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StarRating } from '@/components/StarRating';
 import type { Review, Locale } from '@/lib/types';
+import { useEffect, useState } from 'react';
 
 interface ReviewCardProps {
   review: Review;
@@ -10,13 +13,20 @@ interface ReviewCardProps {
 }
 
 const translations = {
-  en: { service: "Service:", barber: "Barber:" },
-  ar: { service: "الخدمة:", barber: "الحلاق:" }
+  en: { service: "Service:", barber: "Barber:", dateLocale: 'en-US' },
+  ar: { service: "الخدمة:", barber: "الحلاق:", dateLocale: 'ar-EG' }
 };
 
 export function ReviewCard({ review, locale }: ReviewCardProps) {
   const t = translations[locale];
-  const initials = review.customerName.split(' ').map(n => n[0]).join('').toUpperCase(); // Initials are fine as is
+  const initials = review.customerName.split(' ').map(n => n[0]).join('').toUpperCase();
+  
+  const [formattedDate, setFormattedDate] = useState('');
+
+  useEffect(() => {
+    // Format date on client to avoid hydration mismatch for locale-specific formatting
+    setFormattedDate(new Date(review.date).toLocaleDateString(t.dateLocale));
+  }, [review.date, t.dateLocale]);
   
   return (
     <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 h-full flex flex-col bg-card">
@@ -30,7 +40,7 @@ export function ReviewCard({ review, locale }: ReviewCardProps) {
         </Avatar>
         <div>
           <CardTitle className="font-headline text-lg">{review.customerName}</CardTitle>
-          <CardDescription className="text-xs">{new Date(review.date).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-US')}</CardDescription>
+          {formattedDate && <CardDescription className="text-xs">{formattedDate}</CardDescription>}
         </div>
       </CardHeader>
       <CardContent className="flex-grow pt-0">
