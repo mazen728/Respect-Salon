@@ -69,7 +69,7 @@ export default async function HomePage({ params }: HomePageProps) {
   // Video ID: 1093838887, Hash: 18485a1f7d
   const vimeoVideoId = "1093838887";
   const vimeoHash = "18485a1f7d";
-  const galleryVideoUrl = `https://player.vimeo.com/video/${vimeoVideoId}?h=${vimeoHash}&autoplay=1&loop=1&muted=1&title=0&byline=0&portrait=0&pip=0`;
+  const galleryVideoUrl = `https://player.vimeo.com/video/${vimeoVideoId}?h=${vimeoHash}&background=1`;
 
 
   return (
@@ -118,8 +118,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 className="w-full h-full"
                 src={galleryVideoUrl}
                 title={t('glimpseOfSalon')}
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
+                allow="autoplay"
                 loading="lazy"
               ></iframe>
             </div>
