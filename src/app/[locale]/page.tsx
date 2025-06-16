@@ -102,24 +102,14 @@ export default async function HomePage({ params }: HomePageProps) {
           </div>
         </section>
 
-        {/* Gallery Section - Simplified */}
+        {/* Video Section (Replaces Gallery) */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-6">
             <h2 className="text-4xl font-headline font-bold text-primary text-center mb-10">{t('glimpseOfSalon')}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {salonInfoData.galleryImages.slice(0, 3).map((image, index) => (
-                <Card key={index} className="overflow-hidden shadow-lg transform hover:scale-105 transition-transform duration-300">
-                  <div className="relative h-64 w-full">
-                    <Image
-                      src={image.url}
-                      alt={image.alt}
-                      layout="fill"
-                      objectFit="cover"
-                      data-ai-hint={image.dataAiHint}
-                    />
-                  </div>
-                </Card>
-              ))}
+            <div className="w-full h-[400px] md:h-[500px] bg-muted rounded-lg shadow-lg flex items-center justify-center text-center p-4">
+              <p className="text-muted-foreground text-lg">
+                {currentLocale === 'ar' ? 'سيتم عرض الفيديو هنا قريباً. يرجى تقديم رابط الفيديو ليتم تضمينه.' : 'A video will be featured here soon. Please provide the video link for embedding.'}
+              </p>
             </div>
           </div>
         </section>
