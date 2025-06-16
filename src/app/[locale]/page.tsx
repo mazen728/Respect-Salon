@@ -88,7 +88,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
         </section>
 
         {/* About Us Section */}
-        <section className="py-16 bg-secondary">
+        <section className="py-8 bg-secondary">
           <div className="container mx-auto px-6 text-center">
             <h2 className="text-4xl font-headline font-bold text-primary mb-6">{t('aboutUs')}</h2>
             <p className="text-lg text-secondary-foreground max-w-3xl mx-auto leading-relaxed">
@@ -106,8 +106,8 @@ export default async function HomePage({ params: { locale } }: { params: { local
                 className="w-full h-full"
                 src={youtubeVideoUrl}
                 title={t('glimpseOfSalon')}
-                allow="autoplay; encrypted-media;"
-                allowFullScreen={false} // Explicitly false to prevent fullscreen
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen={false} 
                 loading="lazy"
               ></iframe>
             </div>
@@ -256,3 +256,4 @@ export default async function HomePage({ params: { locale } }: { params: { local
     </div>
   );
 }
+
