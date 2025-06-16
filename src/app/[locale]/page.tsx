@@ -18,10 +18,13 @@ interface HomePageProps {
 export default async function HomePage({ params }: HomePageProps) {
   // Ensure an async tick occurs BEFORE accessing params.locale
   await Promise.resolve();
-  const currentLocale = params.locale; // Define currentLocale immediately after the await
+  const localeParam = params.locale; // Read locale from params early
 
   // Then proceed with other async operations and logic
-  const promotionsVisible = await getPromotionsVisibilitySetting();
+  const promotionsVisible = await getPromotionsVisibilitySetting(); // First "real" await
+
+  // Now that a real await has completed, define currentLocale and use it for synchronous data
+  const currentLocale = localeParam;
   const salonInfoData = getSalonInfo(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
 
@@ -30,19 +33,14 @@ export default async function HomePage({ params }: HomePageProps) {
   let firebaseErrorType: 'permission' | 'generic' | null = null;
   let usingFirestorePromotions = false;
 
-
   if (promotionsVisible) {
     try {
       const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
       if (firestorePromotions.length > 0) {
         promotionsData = firestorePromotions;
         usingFirestorePromotions = true;
-        // console.log(`[HomePage] Successfully fetched ${promotionsData.length} promotions from Firestore for locale: ${currentLocale}.`);
-      } else {
-        // console.warn(`[HomePage] No promotions to display for locale: ${currentLocale}. Firestore collection might be empty.`);
       }
     } catch (error: any) {
-      // console.error("[HomePage] Error fetching promotions data:", error);
       fetchError = true;
       if (error.message && (error.message.toLowerCase().includes('permission') || error.message.toLowerCase().includes('denied'))) {
         firebaseErrorType = 'permission';
@@ -50,8 +48,6 @@ export default async function HomePage({ params }: HomePageProps) {
         firebaseErrorType = 'generic';
       }
     }
-  } else {
-    // console.log("[HomePage] Promotions display is DISABLED by admin settings. Not fetching promotions.");
   }
   
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
@@ -268,5 +264,3 @@ export default async function HomePage({ params }: HomePageProps) {
     </div>
   );
 }
-
-    

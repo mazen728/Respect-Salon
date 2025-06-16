@@ -4,9 +4,10 @@ import './globals.css';
 import { PageHeader } from '@/components/PageHeader';
 import { PageFooter } from '@/components/PageFooter';
 import { Toaster } from "@/components/ui/toaster";
+import type { Locale } from '@/lib/types'; // Import Locale
 
 // Helper function to get translations
-const getTranslations = (locale: string) => {
+const getTranslations = (locale: Locale) => { // Use Locale type
   if (locale === 'ar') {
     return {
       title: 'صالون رسبيكت',
@@ -20,7 +21,8 @@ const getTranslations = (locale: string) => {
   };
 };
 
-export async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { locale: Locale } }): Promise<Metadata> { // Use Locale type
+  await Promise.resolve(); // Ensure an async tick before accessing params
   // Fallback to 'en' if params.locale is somehow not provided or is an unexpected value.
   const currentLocale = (params.locale && ['en', 'ar'].includes(params.locale)) ? params.locale : 'en';
   const t = getTranslations(currentLocale);
@@ -30,16 +32,15 @@ export async function generateMetadata({ params }: { params: { locale: string } 
   };
 }
 
-export default async function RootLayout({ // Made this function async
+export default async function RootLayout({
   children,
   params,
 }: Readonly<{
   children: React.ReactNode;
-  params: { locale: string }; // params.locale should be provided by Next.js for /[locale] routes
+  params: { locale: Locale }; // Use Locale type
 }>) {
+  await Promise.resolve(); // Ensure an async tick before accessing params
   // Fallback to 'en' if params.locale is somehow not provided or is an unexpected value.
-  // For /[locale] routes, Next.js should ensure params.locale is one of the configured locales.
-  // This primarily guards against unexpected scenarios or rendering contexts (e.g. certain error pages).
   const currentLocale = (params.locale && ['en', 'ar'].includes(params.locale)) ? params.locale : 'en';
   const direction = currentLocale === 'ar' ? 'rtl' : 'ltr';
 

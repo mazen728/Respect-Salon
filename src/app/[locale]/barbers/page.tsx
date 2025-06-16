@@ -4,7 +4,7 @@ import { getMockBarbers } from '@/lib/mockData';
 import { fetchBarbersFromFirestore } from '@/lib/firebase'; 
 import type { Locale, Barber } from '@/lib/types';
 import { Users, AlertTriangle } from 'lucide-react';
-import { SeedDataButton } from '@/components/SeedDataButton'; // Import the new component
+import { SeedDataButton } from '@/components/SeedDataButton';
 
 interface BarbersPageProps {
   params: { locale: Locale };
@@ -33,27 +33,37 @@ const translations = {
 
 export default async function BarbersPage({ params }: BarbersPageProps) {
   await Promise.resolve(); // Ensure an async tick before accessing params
-  const currentLocale = params.locale;
-  const t = translations[currentLocale] || translations.en;
+  const localeParam = params.locale; // Read locale from params early
   
   let barbers: Barber[] = [];
   let fetchError = false;
   let usingFirestoreData = false;
+  let currentLocaleForTranslations = localeParam; // Use for translations initially
+  let t = translations[currentLocaleForTranslations] || translations.en;
 
   try {
-    const firestoreBarbers = await fetchBarbersFromFirestore(currentLocale);
+    // Main async data fetching using localeParam
+    const firestoreBarbers = await fetchBarbersFromFirestore(localeParam);
+    
+    // Update currentLocaleForTranslations and t after await if needed (though localeParam should be stable)
+    currentLocaleForTranslations = localeParam;
+    t = translations[currentLocaleForTranslations] || translations.en;
+
     if (firestoreBarbers.length > 0) {
       barbers = firestoreBarbers;
       usingFirestoreData = true;
     } else {
-      // console.warn(\`No barbers found in Firestore for locale: ${currentLocale}. Falling back to mock data.\`);
-      barbers = getMockBarbers(currentLocale);
+      barbers = getMockBarbers(currentLocaleForTranslations);
     }
   } catch (error) {
-    // console.error("Error fetching barbers from Firestore, falling back to mock data:", error);
+    currentLocaleForTranslations = localeParam; // Ensure locale is set for error messages
+    t = translations[currentLocaleForTranslations] || translations.en;
     fetchError = true;
-    barbers = getMockBarbers(currentLocale); 
+    barbers = getMockBarbers(currentLocaleForTranslations); 
   }
+  
+  // Final locale for rendering (should be same as localeParam)
+  const currentLocale = localeParam;
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -65,7 +75,6 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
         </p>
       </div>
 
-      {/* Add the SeedDataButton here */}
       <SeedDataButton locale={currentLocale} />
 
       {fetchError && (
@@ -84,7 +93,6 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
         </div>
       )}
 
-
       {barbers.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {barbers.map((barber) => (
@@ -99,5 +107,3 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
     </div>
   );
 }
-
-    
