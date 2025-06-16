@@ -105,7 +105,7 @@ const salonInfoEn = {
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
   socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_salon1/", icon: Instagram },
-    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/p/S1L1yrhbWiLTPfCB/", icon: Facebook },
+    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/15yWNrD3FE/", icon: Facebook },
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
@@ -144,7 +144,7 @@ const salonInfoAr: typeof salonInfoEn = {
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_salon1/", icon: Instagram },
-    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/p/S1L1yrhbWiLTPfCB/", icon: Facebook },
+    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/15yWNrD3FE/", icon: Facebook },
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
