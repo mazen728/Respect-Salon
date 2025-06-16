@@ -8,7 +8,7 @@ import { PromotionCard } from '@/components/PromotionCard';
 import { ReviewCard } from '@/components/ReviewCard';
 import { salonInfo as getSalonInfo, getMockPromotions, getMockReviews } from '@/lib/mockData';
 import { fetchPromotionsFromFirestore } from '@/lib/firebase';
-import { SeedPromotionsButton } from '@/components/SeedPromotionsButton';
+// import { SeedPromotionsButton } from '@/components/SeedPromotionsButton'; // تمت إزالته
 import type { Locale, Promotion, Review } from '@/lib/types';
 import { Users, Percent, Star, MapPin, Sparkles, Ticket, AlertTriangle } from 'lucide-react';
 
@@ -49,8 +49,8 @@ export default async function HomePage({ params }: HomePageProps) {
   const getErrorMessage = () => {
     if (firebaseErrorType === 'permission') {
       return currentLocale === 'ar' 
-        ? 'حدث خطأ في الأذونات أثناء جلب العروض. يرجى التحقق من قواعد الأمان في Firestore.' 
-        : 'Permission error fetching promotions. Please check Firestore security rules.';
+        ? 'حدث خطأ في الأذونات أثناء جلب العروض. يرجى التحقق من قواعد الأمان في Firestore والتأكد من أنها تسمح بالقراءة لمجموعتي `promotions` و `appSettings`.' 
+        : 'Permission error fetching promotions. Please check Firestore security rules and ensure they allow read access for `promotions` and `appSettings` collections.';
     }
     return currentLocale === 'ar' 
       ? 'حدث خطأ غير متوقع أثناء محاولة جلب العروض. يرجى المحاولة مرة أخرى لاحقًا.' 
@@ -155,9 +155,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 </div>
                 <p>{getErrorMessage()}</p>
               </div>
-              <div className="mt-8">
-                <SeedPromotionsButton locale={currentLocale} />
-              </div>
+              {/* SeedPromotionsButton تمت إزالته من هنا */}
             </div>
           </section>
         ) : promotionsData.length > 0 ? (
@@ -172,7 +170,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 </p>
               </div>
 
-              <SeedPromotionsButton locale={currentLocale} />
+              {/* SeedPromotionsButton تمت إزالته من هنا */}
               
               {usingFirestorePromotions && ( 
                 <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground text-center">
@@ -201,12 +199,10 @@ export default async function HomePage({ params }: HomePageProps) {
                 </p>
               </div>
               
-              <div className="mt-8">
-                <SeedPromotionsButton locale={currentLocale} />
-              </div>
+              {/* SeedPromotionsButton تمت إزالته من هنا */}
               
               <div className="mt-6 p-3 border border-dashed rounded-md bg-secondary/20 text-sm text-muted-foreground">
-                  {currentLocale === 'ar' ? 'لم يتم العثور على عروض في قاعدة البيانات، أو أن عرضها معطل حاليًا بواسطة إعدادات المسؤول. يمكنك محاولة إضافة البيانات الأولية.' : 'No promotions found in the database, or their display is currently disabled by admin settings. You can try seeding initial data.'}
+                  {currentLocale === 'ar' ? 'لم يتم العثور على عروض في قاعدة البيانات، أو أن عرضها معطل حاليًا بواسطة إعدادات المسؤول.' : 'No promotions found in the database, or their display is currently disabled by admin settings.'}
               </div>
             </div>
           </section>
@@ -270,5 +266,3 @@ export default async function HomePage({ params }: HomePageProps) {
     </div>
   );
 }
-
-    
