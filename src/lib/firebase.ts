@@ -198,9 +198,9 @@ export async function seedPromotionsData(): Promise<string> {
         title_ar: promoData.title.ar,
         description_en: promoData.description.en,
         description_ar: promoData.description.ar,
-        couponCode: promoData.couponCode,
-        imageUrl: promoData.imageUrl,
-        dataAiHint: promoData.dataAiHint,
+        couponCode: promoData.couponCode ?? null,
+        imageUrl: promoData.imageUrl ?? null,
+        dataAiHint: promoData.dataAiHint ?? null,
       };
       batch.set(docRef, firestoreData);
       count++;
@@ -220,3 +220,4 @@ export async function seedPromotionsData(): Promise<string> {
     return `Error seeding promotions data: ${error instanceof Error ? error.message : String(error)}`;
   }
 }
+
