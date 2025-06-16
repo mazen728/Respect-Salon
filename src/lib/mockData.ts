@@ -1,6 +1,6 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile, Locale } from './types';
-import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap, Ticket, LucideIcon, Instagram, Facebook, Twitter } from 'lucide-react';
+import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Palette, Zap, Ticket, LucideIcon, Instagram, Facebook } from 'lucide-react';
 
 
 interface LocalizedString {
@@ -106,7 +106,6 @@ const salonInfoEn = {
   socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_salon1/", icon: Instagram },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/p/S1L1yrhbWiLTPfCB/", icon: Facebook },
-    { name: { en: "TikTok", ar: "تيك توك" }, url: "https://www.tiktok.com/@respect_salon", icon: Drama }, // Using Drama as a placeholder for TikTok, if available
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
@@ -146,7 +145,6 @@ const salonInfoAr: typeof salonInfoEn = {
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_salon1/", icon: Instagram },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/p/S1L1yrhbWiLTPfCB/", icon: Facebook },
-    { name: { en: "TikTok", ar: "تيك توك" }, url: "https://www.tiktok.com/@respect_salon", icon: Drama }, // Using Drama as a placeholder for TikTok
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
@@ -185,3 +183,4 @@ export const mockPromotions = getMockPromotions('en'); // Fallback or default
 export const mockReviews = getMockReviews('en'); // Fallback or default
 export const mockUserProfile = getMockUserProfile('en'); // Fallback or default
     
+
