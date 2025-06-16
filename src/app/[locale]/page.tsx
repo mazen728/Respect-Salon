@@ -82,20 +82,6 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
       </section>
       
-      {/* Featured Look Section */}
-      <section className="container mx-auto text-center">
-        <h2 className="font-headline text-3xl font-semibold mb-8 text-primary">{t('ourFeaturedLook')}</h2>
-        <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl mx-auto max-w-4xl">
-          <Image
-            src="https://placehold.co/1000x500.png"
-            alt={params.locale === 'ar' ? "اطلالة مميزة من الصالون" : "Featured look from the salon"}
-            layout="fill"
-            objectFit="cover"
-            data-ai-hint="stylish haircut salon"
-          />
-        </div>
-      </section>
-
       {/* Salon Gallery */}
       <section className="container mx-auto">
         <h2 className="font-headline text-3xl font-semibold mb-8 text-center text-primary">{t('glimpseOfSalon')}</h2>
