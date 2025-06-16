@@ -1,7 +1,7 @@
 
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
-import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc, setDoc, getDoc } from 'firebase/firestore';
 import { getAnalytics, isSupported } from "firebase/analytics";
 import type { Barber, Locale, Promotion } from './types';
 import { generateMockBarbers as getOriginalMockBarbers, getRawMockPromotions } from './mockData'; 
@@ -130,22 +130,42 @@ export async function seedBarbersData(): Promise<string> {
   }
 }
 
+// Function to get the global setting for promotions visibility
+export async function getPromotionsVisibilitySetting(): Promise<boolean> {
+  if (!firebaseConfig.projectId) {
+    console.warn("Firebase project ID not configured. Cannot fetch app settings.");
+    return false; // Default to not showing if project ID is missing
+  }
+  try {
+    const settingsDocRef = doc(db, 'appSettings', 'main');
+    const docSnap = await getDoc(settingsDocRef);
+
+    if (docSnap.exists() && docSnap.data().promotionsVisible === true) {
+      return true;
+    }
+    // If doc doesn't exist, field doesn't exist, or field is false, return false.
+    return false;
+  } catch (error) {
+    console.error("Error fetching promotions visibility setting:", error);
+    return false; // Default to false on error
+  }
+}
 
 // Function to fetch promotions from Firestore
 export async function fetchPromotionsFromFirestore(locale: Locale): Promise<Promotion[]> {
-  // السطر التالي هو التعديل المؤقت للاختبار
-  // سيجعل هذه الدالة ترجع دائمًا قائمة فارغة
-  // قم بحذفه أو التعليق عليه للعودة للسلوك الطبيعي
-  return []; // <--- هذا هو السطر المضاف للاختبار
-
   if (!firebaseConfig.projectId) {
     console.warn("Firebase project ID not configured. Firestore fetch skipped for promotions.");
     return [];
   }
+
+  const promotionsAreVisible = await getPromotionsVisibilitySetting();
+  if (!promotionsAreVisible) {
+    console.warn("Promotions display is disabled by admin settings in appSettings/main (promotionsVisible field).");
+    return [];
+  }
+
   try {
     const promotionsRef = collection(db, 'promotions');
-    // We fetch all promotions, then filter/map by locale in the client
-    // Alternatively, store locale-specific collections or documents if preferred
     const querySnapshot = await getDocs(promotionsRef);
 
     if (querySnapshot.empty) {
@@ -187,43 +207,51 @@ export async function seedPromotionsData(): Promise<string> {
     const existingDataQuery = query(promotionsRef, limit(1));
     const existingDataSnapshot = await getDocs(existingDataQuery);
 
-    if (!existingDataSnapshot.empty) {
-      console.log('Promotions data likely already exists in Firestore. Seeding skipped to avoid duplication.');
-      return 'Promotions data likely already exists. Seeding skipped.';
-    }
-
-    const batch = writeBatch(db);
-    const rawPromotions = getRawMockPromotions(); // Get raw data with en/ar fields
+    let promotionsSeededMessage = 'Promotions data likely already exists. Seeding skipped.';
     let count = 0;
 
-    rawPromotions.forEach(promoData => {
-      const docRef = doc(promotionsRef, promoData.id); // Use mock ID as Firestore document ID
-      const firestoreData = {
-        title_en: promoData.title.en,
-        title_ar: promoData.title.ar,
-        description_en: promoData.description.en,
-        description_ar: promoData.description.ar,
-        couponCode: promoData.couponCode ?? null,
-        imageUrl: promoData.imageUrl ?? null,
-        dataAiHint: promoData.dataAiHint ?? null,
-      };
-      batch.set(docRef, firestoreData);
-      count++;
-    });
+    if (existingDataSnapshot.empty) {
+      const batch = writeBatch(db);
+      const rawPromotions = getRawMockPromotions(); 
+      rawPromotions.forEach(promoData => {
+        const docRef = doc(promotionsRef, promoData.id); 
+        const firestoreData = {
+          title_en: promoData.title.en,
+          title_ar: promoData.title.ar,
+          description_en: promoData.description.en,
+          description_ar: promoData.description.ar,
+          couponCode: promoData.couponCode ?? null,
+          imageUrl: promoData.imageUrl ?? null,
+          dataAiHint: promoData.dataAiHint ?? null,
+        };
+        batch.set(docRef, firestoreData);
+        count++;
+      });
+      await batch.commit();
+      promotionsSeededMessage = `Successfully seeded ${count} promotion documents.`;
+      console.log(promotionsSeededMessage);
+    } else {
+      console.log('Promotions data likely already exists in Firestore. Seeding skipped to avoid duplication.');
+    }
 
-    await batch.commit();
-    console.log(`Successfully seeded ${count} promotion documents into Firestore.`);
-    return `Successfully seeded ${count} promotion documents.`;
+    // Ensure promotions visibility is enabled
+    const settingsRef = doc(db, 'appSettings', 'main');
+    await setDoc(settingsRef, { promotionsVisible: true }, { merge: true });
+    console.log('Successfully ensured promotionsVisible is true in appSettings/main.');
+    
+    return `${promotionsSeededMessage} Promotions display setting is now ON.`;
+
   } catch (error) {
-    console.error('Error seeding promotions data to Firestore:', error);
+    console.error('Error during promotions seeding process:', error);
+    let specificError = "";
     if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
-      return "Error seeding promotions: Missing or insufficient Firestore permissions. Please check your Firestore security rules.";
+      specificError = "Missing or insufficient Firestore permissions. Please check your Firestore security rules.";
+    } else if (error instanceof Error && (error.message.includes('Failed to get document because the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
+      specificError = "Could not reach Cloud Firestore. Check your internet connection and Firebase configuration.";
+    } else {
+      specificError = error instanceof Error ? error.message : String(error);
     }
-    if (error instanceof Error && (error.message.includes('Failed to get document because the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
-      return "Error seeding promotions: Could not reach Cloud Firestore. Check your internet connection and Firebase configuration.";
-    }
-    return `Error seeding promotions data: ${error instanceof Error ? error.message : String(error)}`;
+    return `Error during promotions seeding: ${specificError}`;
   }
 }
-
     

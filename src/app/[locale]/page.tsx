@@ -1,3 +1,4 @@
+
 // src/app/[locale]/page.tsx
 import Image from 'next/image';
 import Link from 'next/link';
@@ -20,36 +21,28 @@ export default async function HomePage({ params }: HomePageProps) {
   const salonInfoData = getSalonInfo(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
 
-  // --- بداية التعديل لاختبار حالة "لا توجد عروض" ---
-  // اضبط القيمة إلى true لمحاكاة عدم وجود عروض، وإلى false للعودة للسلوك الطبيعي
-  const SIMULATE_NO_PROMOTIONS = true; 
-  // --- نهاية التعديل ---
-
   let promotionsData: Promotion[] = [];
   let fetchError = false;
   let usingFirestorePromotions = false;
 
-  if (SIMULATE_NO_PROMOTIONS) {
-    // في وضع المحاكاة، نترك promotionsData فارغة
-    // ونضبط fetchError و usingFirestorePromotions لتعكس أننا لم نحاول الجلب
-    fetchError = false;
-    usingFirestorePromotions = false;
-    console.warn(`[TESTING] Simulating no promotions for locale: ${currentLocale}. promotionsData will be empty.`);
-  } else {
-    try {
-      const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
-      if (firestorePromotions.length > 0) {
-        promotionsData = firestorePromotions;
-        usingFirestorePromotions = true;
-      } else {
-        console.warn(`No promotions found in Firestore for locale: ${currentLocale}. promotionsData will be empty.`);
-        // promotionsData تبقى فارغة إذا لم يتم العثور على شيء في Firestore
-      }
-    } catch (error) {
-      console.error("Error fetching promotions from Firestore, falling back to mock data:", error);
-      fetchError = true;
-      promotionsData = getMockPromotions(currentLocale); 
+  try {
+    // fetchPromotionsFromFirestore now handles the visibility setting internally
+    const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
+    if (firestorePromotions.length > 0) {
+      promotionsData = firestorePromotions;
+      usingFirestorePromotions = true;
+    } else {
+      // This case means either Firestore is empty OR promotions are hidden by settings.
+      // The console log inside fetchPromotionsFromFirestore will specify if hidden by settings.
+      console.warn(`No promotions to display for locale: ${currentLocale}. This could be due to empty Firestore collection or admin settings.`);
+      // promotionsData remains empty.
     }
+  } catch (error) {
+    console.error("Error fetching promotions data, an unexpected error occurred:", error);
+    fetchError = true; // Indicates a failure in the fetch process itself, not just empty data or hidden by settings.
+    // No fallback to mock data here if the intention is to rely on Firestore or settings.
+    // If mock data fallback is desired on true error, it can be reinstated:
+    // promotionsData = getMockPromotions(currentLocale); 
   }
   
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
@@ -142,7 +135,7 @@ export default async function HomePage({ params }: HomePageProps) {
 
         {/* Promotions Section Logic */}
         {promotionsData.length > 0 ? (
-          // Case 1: Promotions ARE available (from Firestore or Mock Fallback on error)
+          // Case 1: Promotions ARE available (from Firestore and enabled by settings)
           <section id="promotions" className="py-16 bg-background">
             <div className="container mx-auto px-6">
               <div className="text-center mb-12">
@@ -155,19 +148,14 @@ export default async function HomePage({ params }: HomePageProps) {
 
               <SeedPromotionsButton locale={currentLocale} />
 
-              {fetchError && ( // This will show if Firestore fetch failed, and we are using mock data that has content
+              {fetchError && ( 
                 <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive text-center">
-                  <p>{currentLocale === 'ar' ? 'حدث خطأ أثناء جلب العروض. يتم عرض البيانات الافتراضية.' : 'Error fetching promotions. Displaying fallback data.'}</p>
+                  <p>{currentLocale === 'ar' ? 'حدث خطأ أثناء جلب العروض. يتم عرض البيانات الافتراضية إذا توفرت.' : 'Error fetching promotions. Displaying fallback data if available.'}</p>
                 </div>
               )}
               {!fetchError && usingFirestorePromotions && ( 
                 <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground text-center">
                   {currentLocale === 'ar' ? 'يتم عرض العروض من قاعدة البيانات.' : 'Displaying promotions from Firestore.'}
-                </div>
-              )}
-               {!fetchError && !usingFirestorePromotions && promotionsData.length > 0 && ( // Fallback to mock was successful
-                <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground text-center">
-                  {currentLocale === 'ar' ? 'يتم عرض البيانات الافتراضية للعروض (لم يتم العثور على بيانات في قاعدة البيانات أو حدث خطأ).' : 'Displaying fallback promotions data (no data found in Firestore or error occurred).'}
                 </div>
               )}
               
@@ -179,10 +167,10 @@ export default async function HomePage({ params }: HomePageProps) {
             </div>
           </section>
         ) : (
-          // Case 2: NO Promotions available (Firestore is empty and successfully queried, OR SIMULATED)
+          // Case 2: NO Promotions to display (Firestore is empty, OR display disabled by settings, OR fetch error and no fallback)
           <section className="py-16 bg-background">
             <div className="container mx-auto px-6 text-center">
-              {fetchError && promotionsData.length === 0 && ( // This condition means Firestore errored AND mock data was also empty.
+              {fetchError && ( 
                 <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
                   <p>{currentLocale === 'ar' ? 'حدث خطأ أثناء محاولة جلب العروض ولم تتوفر بيانات بديلة. يرجى المحاولة مرة أخرى لاحقًا.' : 'An error occurred while trying to fetch promotions and no fallback data was available. Please try again later.'}</p>
                 </div>
@@ -201,17 +189,12 @@ export default async function HomePage({ params }: HomePageProps) {
                 <SeedPromotionsButton locale={currentLocale} />
               </div>
               
-              {SIMULATE_NO_PROMOTIONS ? (
-                 <div className="mt-6 p-3 border border-dashed rounded-md bg-secondary/20 text-sm text-muted-foreground">
-                    {currentLocale === 'ar' ? 'ملاحظة: يتم حاليًا محاكاة عدم وجود عروض لأغراض الاختبار. غيّر قيمة `SIMULATE_NO_PROMOTIONS` في الكود إلى `false` للعودة للسلوك الطبيعي.' : 'Note: Currently simulating no promotions for testing. Change `SIMULATE_NO_PROMOTIONS` in the code to `false` to revert to normal behavior.'}
-                </div>
-              ) : (
-                !fetchError && !usingFirestorePromotions && ( // This is the original condition: Firestore queried successfully, found empty
+              {!fetchError && ( 
                   <div className="mt-6 p-3 border border-dashed rounded-md bg-secondary/20 text-sm text-muted-foreground">
-                      {currentLocale === 'ar' ? 'لم يتم العثور على عروض في قاعدة البيانات. يمكنك محاولة إضافة البيانات الأولية إذا كنت مسؤولاً.' : 'No promotions found in the database. You can try seeding initial data if you are an admin.'}
+                      {currentLocale === 'ar' ? 'لم يتم العثور على عروض في قاعدة البيانات، أو أن عرضها معطل حاليًا بواسطة إعدادات المسؤول. يمكنك محاولة إضافة البيانات الأولية.' : 'No promotions found in the database, or their display is currently disabled by admin settings. You can try seeding initial data.'}
                   </div>
                 )
-              )}
+              }
             </div>
           </section>
         )}
