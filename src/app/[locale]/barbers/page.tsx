@@ -1,9 +1,10 @@
 
 import { BarberCard } from '@/components/BarberCard';
-import { getMockBarbers } from '@/lib/mockData'; // Renamed to avoid conflict
-import { fetchBarbersFromFirestore } from '@/lib/firebase'; // Import the Firestore fetch function
+import { getMockBarbers } from '@/lib/mockData'; 
+import { fetchBarbersFromFirestore } from '@/lib/firebase'; 
 import type { Locale, Barber } from '@/lib/types';
 import { Users, AlertTriangle } from 'lucide-react';
+import { SeedDataButton } from '@/components/SeedDataButton'; // Import the new component
 
 interface BarbersPageProps {
   params: { locale: Locale };
@@ -16,6 +17,8 @@ const translations = {
     fetchErrorTitle: "Failed to Load Barbers",
     fetchErrorDescription: "We couldn't fetch the list of barbers from the database at the moment. Displaying available mock data. Please check your internet connection or try again later.",
     noBarbersFound: "No barbers found at this time.",
+    firestoreNote: "Displaying barbers from Firestore. If this list is empty or incorrect, ensure data is seeded and security rules are configured.",
+    mockDataNote: "Displaying mock barbers data as a fallback. Please check Firestore connection or seed data if needed."
   },
   ar: {
     title: "حلاقونا الموقرون",
@@ -23,6 +26,8 @@ const translations = {
     fetchErrorTitle: "فشل في تحميل قائمة الحلاقين",
     fetchErrorDescription: "لم نتمكن من جلب قائمة الحلاقين من قاعدة البيانات في الوقت الحالي. يتم عرض البيانات الوهمية المتاحة. يرجى التحقق من اتصالك بالإنترنت أو المحاولة مرة أخرى لاحقًا.",
     noBarbersFound: "لم يتم العثور على حلاقين في الوقت الحالي.",
+    firestoreNote: "يتم عرض الحلاقين من Firestore. إذا كانت هذه القائمة فارغة أو غير صحيحة، تأكد من إضافة البيانات الأولية وضبط قواعد الأمان.",
+    mockDataNote: "يتم عرض بيانات الحلاقين الوهمية كبديل. يرجى التحقق من اتصال Firestore أو إضافة البيانات الأولية إذا لزم الأمر."
   },
 };
 
@@ -30,21 +35,21 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
   const t = translations[params.locale] || translations.en;
   let barbers: Barber[] = [];
   let fetchError = false;
+  let usingFirestoreData = false;
 
   try {
     const firestoreBarbers = await fetchBarbersFromFirestore(params.locale);
     if (firestoreBarbers.length > 0) {
       barbers = firestoreBarbers;
+      usingFirestoreData = true;
     } else {
-      // If Firestore returns empty (e.g., no data seeded or locale specific data missing),
-      // fall back to mock data for demonstration purposes.
-      console.warn(`No barbers found in Firestore for locale: ${params.locale}. Falling back to mock data.`);
+      console.warn(\`No barbers found in Firestore for locale: ${params.locale}. Falling back to mock data.\`);
       barbers = getMockBarbers(params.locale);
     }
   } catch (error) {
     console.error("Error fetching barbers from Firestore, falling back to mock data:", error);
     fetchError = true;
-    barbers = getMockBarbers(params.locale); // Fallback to mock data on error
+    barbers = getMockBarbers(params.locale); 
   }
 
   return (
@@ -57,6 +62,9 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
         </p>
       </div>
 
+      {/* Add the SeedDataButton here */}
+      <SeedDataButton locale={params.locale} />
+
       {fetchError && (
         <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
           <div className="flex items-center">
@@ -66,6 +74,13 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
           <p className="text-sm">{t.fetchErrorDescription}</p>
         </div>
       )}
+
+      {!fetchError && (
+        <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground">
+          {usingFirestoreData ? t.firestoreNote : t.mockDataNote}
+        </div>
+      )}
+
 
       {barbers.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
