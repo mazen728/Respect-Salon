@@ -65,12 +65,8 @@ export default async function HomePage({ params }: HomePageProps) {
       : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
   };
 
-  const originalFacebookVideoUrl = "https://www.facebook.com/share/v/1CABAYb2N5/";
-  // For server components, ensure encodeURIComponent is available or do it if this was client side.
-  // For now, assuming direct string construction is fine as it's a fixed URL.
-  // If params were dynamic, this would need to be handled carefully.
-  const encodedFbUrl = encodeURIComponent(originalFacebookVideoUrl);
-  const videoEmbedUrl = `https://www.facebook.com/plugins/video.php?href=${encodedFbUrl}&show_text=false&autoplay=1&mute=1&width=560`;
+  const youtubeVideoId = "AeQH9veCMbw";
+  const videoEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}`;
 
 
   return (
@@ -120,7 +116,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 src={videoEmbedUrl}
                 title={t('glimpseOfSalon')}
                 frameBorder="0"
-                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               ></iframe>
             </div>
