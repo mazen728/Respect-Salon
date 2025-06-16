@@ -227,6 +227,30 @@ export default async function HomePage({ params: { locale } }: { params: { local
             </div>
           </div>
         </section>
+
+        {/* Social Media Section */}
+        <section className="py-16 bg-secondary">
+          <div className="container mx-auto px-6 text-center">
+            <h2 className="text-4xl font-headline font-bold text-primary mb-10">
+              {currentLocale === 'ar' ? 'تابعنا على وسائل التواصل' : 'Connect With Us'}
+            </h2>
+            <div className="flex justify-center items-center space-x-8 rtl:space-x-reverse">
+              {salonInfoData.socialMedia.map((social) => (
+                <a
+                  key={social.name[currentLocale] || social.name.en}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.name[currentLocale] || social.name.en}
+                  className="text-primary hover:text-accent transition-colors duration-300 transform hover:scale-110"
+                >
+                  <social.icon className="h-10 w-10 md:h-12 md:w-12" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+
       </main>
     </div>
   );

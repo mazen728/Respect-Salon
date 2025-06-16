@@ -1,6 +1,6 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile, Locale } from './types';
-import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap, Ticket, LucideIcon } from 'lucide-react';
+import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap, Ticket, LucideIcon, Instagram, Facebook, Twitter } from 'lucide-react';
 
 
 interface LocalizedString {
@@ -104,9 +104,9 @@ const salonInfoEn = {
   phone: "035836388",
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
   socialMedia: [
-    { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
-    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/19SjodPc7s/", icon: Zap },
-    { name: { en: "Twitter", ar: "تويتر" }, url: "#", icon: Zap },
+    { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_salon1/", icon: Instagram },
+    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/p/S1L1yrhbWiLTPfCB/", icon: Facebook },
+    { name: { en: "TikTok", ar: "تيك توك" }, url: "https://www.tiktok.com/@respect_salon", icon: Drama }, // Using Drama as a placeholder for TikTok, if available
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
@@ -144,9 +144,9 @@ const salonInfoAr: typeof salonInfoEn = {
   phone: "035836388",
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
    socialMedia: [
-    { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
-    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/19SjodPc7s/", icon: Zap },
-    { name: { en: "Twitter", ar: "تويتر" }, url: "#", icon: Zap },
+    { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_salon1/", icon: Instagram },
+    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/p/S1L1yrhbWiLTPfCB/", icon: Facebook },
+    { name: { en: "TikTok", ar: "تيك توك" }, url: "https://www.tiktok.com/@respect_salon", icon: Drama }, // Using Drama as a placeholder for TikTok
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
