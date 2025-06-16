@@ -1,6 +1,6 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile, Locale } from './types';
-import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap, Ticket } from 'lucide-react';
+import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap, Ticket, LucideIcon } from 'lucide-react';
 
 
 interface LocalizedString {
@@ -111,7 +111,7 @@ const salonInfoEn = {
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
   galleryImages: [
-    { url: "https://placehold.co/400x300.png", alt: "Salon Interior 1", dataAiHint: "luxury salon interior" },
+    { url: "https://i.postimg.cc/HxdSzdYB/resized-image-400x300-1.jpg", alt: "Salon Interior 1", dataAiHint: "luxury salon interior" },
     { url: "https://placehold.co/400x300.png", alt: "Salon Interior 2", dataAiHint: "barber station chair" },
     { url: "https://placehold.co/400x300.png", alt: "Happy Customer", dataAiHint: "customer smiling barber" },
   ],
@@ -151,7 +151,7 @@ const salonInfoAr: typeof salonInfoEn = {
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
   galleryImages: [
-    { url: "https://placehold.co/400x300.png", alt: "الصالون من الداخل 1", dataAiHint: "luxury salon interior" },
+    { url: "https://i.postimg.cc/HxdSzdYB/resized-image-400x300-1.jpg", alt: "الصالون من الداخل 1", dataAiHint: "luxury salon interior" },
     { url: "https://placehold.co/400x300.png", alt: "الصالون من الداخل 2", dataAiHint: "barber station chair" },
     { url: "https://placehold.co/400x300.png", alt: "عميل سعيد", dataAiHint: "customer smiling barber" },
   ],
