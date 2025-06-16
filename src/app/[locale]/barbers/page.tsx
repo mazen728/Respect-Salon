@@ -4,7 +4,7 @@ import { getMockBarbers } from '@/lib/mockData';
 import { fetchBarbersFromFirestore } from '@/lib/firebase'; 
 import type { Locale, Barber } from '@/lib/types';
 import { Users, AlertTriangle } from 'lucide-react';
-import { SeedDataButton } from '@/components/SeedDataButton';
+// SeedDataButton import removed
 
 interface BarbersPageProps {
   params: { locale: Locale };
@@ -75,7 +75,7 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
         </p>
       </div>
 
-      <SeedDataButton locale={currentLocale} />
+      {/* SeedDataButton component usage removed */}
 
       {fetchError && (
         <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
