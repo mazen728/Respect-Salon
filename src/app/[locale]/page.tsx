@@ -104,7 +104,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
                 className="w-full h-full"
                 src={youtubeVideoUrl}
                 title={t('glimpseOfSalon')}
-                allow="autoplay; encrypted-media; picture-in-picture"
+                allow="autoplay; encrypted-media; picture-in-picture; loop"
                 allowFullScreen={false} 
                 loading="lazy"
               ></iframe>
@@ -156,11 +156,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
                 </p>
               </div>
               
-              {usingFirestorePromotions && ( 
-                <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground text-center">
-                  {currentLocale === 'ar' ? 'يتم عرض العروض من قاعدة البيانات.' : 'Displaying promotions from Firestore.'}
-                </div>
-              )}
+              {/* Removed the 'usingFirestorePromotions' notification div */}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {promotionsData.map((promo) => (
