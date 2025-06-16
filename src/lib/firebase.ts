@@ -133,6 +133,11 @@ export async function seedBarbersData(): Promise<string> {
 
 // Function to fetch promotions from Firestore
 export async function fetchPromotionsFromFirestore(locale: Locale): Promise<Promotion[]> {
+  // السطر التالي هو التعديل المؤقت للاختبار
+  // سيجعل هذه الدالة ترجع دائمًا قائمة فارغة
+  // قم بحذفه أو التعليق عليه للعودة للسلوك الطبيعي
+  return []; // <--- هذا هو السطر المضاف للاختبار
+
   if (!firebaseConfig.projectId) {
     console.warn("Firebase project ID not configured. Firestore fetch skipped for promotions.");
     return [];
@@ -221,3 +226,4 @@ export async function seedPromotionsData(): Promise<string> {
   }
 }
 
+    
