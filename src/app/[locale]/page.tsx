@@ -66,7 +66,7 @@ export default async function HomePage({ params }: HomePageProps) {
   };
 
   const youtubeVideoId = "AeQH9veCMbw";
-  const videoEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}`;
+  const videoEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&showinfo=0&modestbranding=1`;
 
 
   return (
