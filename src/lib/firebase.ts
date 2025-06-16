@@ -1,10 +1,10 @@
 
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
-import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc, setDoc } from 'firebase/firestore';
 import { getAnalytics, isSupported } from "firebase/analytics";
-import type { Barber, Locale } from './types';
-import { generateMockBarbers as getOriginalMockBarbers } from './mockData'; // Renamed to avoid conflict for seeding
+import type { Barber, Locale, Promotion } from './types';
+import { generateMockBarbers as getOriginalMockBarbers, getRawMockPromotions } from './mockData'; 
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -43,12 +43,11 @@ export { db, analytics };
 // Function to fetch barbers from Firestore
 export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[]> {
   if (!firebaseConfig.projectId) {
-    console.warn("Firebase project ID not configured in firebaseConfig. Firestore fetch skipped for barbers.");
-    return []; // Return empty or handle as an error, then fallback in calling function
+    console.warn("Firebase project ID not configured. Firestore fetch skipped for barbers.");
+    return []; 
   }
   try {
     const barbersRef = collection(db, 'barbers');
-    // Query for barbers matching the current locale
     const q = query(barbersRef, where('locale', '==', locale));
     const querySnapshot = await getDocs(q);
     
@@ -67,20 +66,18 @@ export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[
         specialties: Array.isArray(data.specialties) ? data.specialties : [],
         rating: typeof data.rating === 'number' ? data.rating : 0,
         availability: data.availability || '',
-        // Ensure locale is part of the returned object if needed, though it's used for query
-        // locale: data.locale 
-      } as Barber; // Type assertion
+      } as Barber; 
     });
     return barbers;
   } catch (error) {
     console.error(`Error fetching barbers from Firestore for locale ${locale}:`, error);
     if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
-        console.error("Firestore Security Rules might be denying access.");
+        console.error("Firestore Security Rules might be denying access for barbers.");
     }
     if (error instanceof Error && (error.message.includes('Failed to get document because the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
-        console.error("Could not reach Cloud Firestore. Check your internet connection and Firebase configuration.");
+        console.error("Could not reach Cloud Firestore for barbers. Check your internet connection and Firebase configuration.");
     }
-    return []; // Return empty on error, let calling function handle fallback
+    return []; 
   }
 }
 
@@ -88,17 +85,15 @@ export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[
 // Basic seeding function for Barbers data
 export async function seedBarbersData(): Promise<string> {
   if (!firebaseConfig.projectId) {
-    return "Firebase project ID not configured in firebaseConfig. Seeding skipped.";
+    return "Firebase project ID not configured. Barbers seeding skipped.";
   }
   try {
     const barbersRef = collection(db, 'barbers');
-    const existingDataQuery = query(barbersRef, limit(1)); // Check if any data exists at all
+    const existingDataQuery = query(barbersRef, limit(1)); 
     const existingDataSnapshot = await getDocs(existingDataQuery);
 
     if (!existingDataSnapshot.empty) {
-      // More robust check: verify if data for both locales has been seeded
-      // This example skips if *any* data is present, can be enhanced
-      console.log('Barbers data likely already exists in Firestore. Seeding skipped to avoid duplication.');
+      console.log('Barbers data likely already exists in Firestore. Seeding skipped.');
       return 'Barbers data likely already exists. Seeding skipped.';
     }
 
@@ -107,17 +102,14 @@ export async function seedBarbersData(): Promise<string> {
     let count = 0;
 
     for (const currentLocale of locales) {
-      // Use the original mock data generator for each locale
       const mockBarbersForLocale: Omit<Barber, 'id'>[] = getOriginalMockBarbers(currentLocale).map(({ id, ...rest }) => ({
-        ...rest, // All other properties (name, imageUrl, specialties, rating, availability, dataAiHint)
-        originalMockId: id, // Keep track of the original mock ID
-        locale: currentLocale,     // Add locale field
+        ...rest, 
+        originalMockId: id, 
+        locale: currentLocale,     
       }));
       
       mockBarbersForLocale.forEach((barberData) => {
-        // Firestore will auto-generate document IDs if you use .add()
-        // If you want to use your mock IDs, use .doc(id).set(data)
-        const docRef = doc(collection(db, 'barbers')); // Auto-generate ID
+        const docRef = doc(collection(db, 'barbers')); 
         batch.set(docRef, barberData);
         count++;
       });
@@ -129,11 +121,102 @@ export async function seedBarbersData(): Promise<string> {
   } catch (error) {
     console.error('Error seeding barbers data to Firestore:', error);
     if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
-        return "Error seeding barbers: Missing or insufficient Firestore permissions. Please check your Firestore security rules.";
+        return "Error seeding barbers: Missing or insufficient Firestore permissions.";
     }
     if (error instanceof Error && (error.message.includes('Failed to get document because the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
-        return "Error seeding barbers: Could not reach Cloud Firestore. Check your internet connection and Firebase configuration.";
+        return "Error seeding barbers: Could not reach Cloud Firestore.";
     }
     return `Error seeding barbers data: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+
+// Function to fetch promotions from Firestore
+export async function fetchPromotionsFromFirestore(locale: Locale): Promise<Promotion[]> {
+  if (!firebaseConfig.projectId) {
+    console.warn("Firebase project ID not configured. Firestore fetch skipped for promotions.");
+    return [];
+  }
+  try {
+    const promotionsRef = collection(db, 'promotions');
+    // We fetch all promotions, then filter/map by locale in the client
+    // Alternatively, store locale-specific collections or documents if preferred
+    const querySnapshot = await getDocs(promotionsRef);
+
+    if (querySnapshot.empty) {
+      console.log(`No promotions found in Firestore.`);
+      return [];
+    }
+
+    const promotions: Promotion[] = querySnapshot.docs.map(docSnapshot => {
+      const data = docSnapshot.data();
+      return {
+        id: docSnapshot.id,
+        title: locale === 'ar' ? data.title_ar : data.title_en,
+        description: locale === 'ar' ? data.description_ar : data.description_en,
+        couponCode: data.couponCode,
+        imageUrl: data.imageUrl || 'https://placehold.co/600x400.png',
+        dataAiHint: data.dataAiHint || 'discount offer',
+      } as Promotion;
+    });
+    return promotions;
+  } catch (error) {
+    console.error(`Error fetching promotions from Firestore for locale ${locale}:`, error);
+    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+      console.error("Firestore Security Rules might be denying access for promotions.");
+    }
+    if (error instanceof Error && (error.message.includes('Failed to get document because the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
+      console.error("Could not reach Cloud Firestore for promotions. Check your internet connection and Firebase configuration.");
+    }
+    return [];
+  }
+}
+
+// Basic seeding function for Promotions data
+export async function seedPromotionsData(): Promise<string> {
+  if (!firebaseConfig.projectId) {
+    return "Firebase project ID not configured. Promotions seeding skipped.";
+  }
+  try {
+    const promotionsRef = collection(db, 'promotions');
+    const existingDataQuery = query(promotionsRef, limit(1));
+    const existingDataSnapshot = await getDocs(existingDataQuery);
+
+    if (!existingDataSnapshot.empty) {
+      console.log('Promotions data likely already exists in Firestore. Seeding skipped to avoid duplication.');
+      return 'Promotions data likely already exists. Seeding skipped.';
+    }
+
+    const batch = writeBatch(db);
+    const rawPromotions = getRawMockPromotions(); // Get raw data with en/ar fields
+    let count = 0;
+
+    rawPromotions.forEach(promoData => {
+      const docRef = doc(promotionsRef, promoData.id); // Use mock ID as Firestore document ID
+      const firestoreData = {
+        title_en: promoData.title.en,
+        title_ar: promoData.title.ar,
+        description_en: promoData.description.en,
+        description_ar: promoData.description.ar,
+        couponCode: promoData.couponCode,
+        imageUrl: promoData.imageUrl,
+        dataAiHint: promoData.dataAiHint,
+      };
+      batch.set(docRef, firestoreData);
+      count++;
+    });
+
+    await batch.commit();
+    console.log(`Successfully seeded ${count} promotion documents into Firestore.`);
+    return `Successfully seeded ${count} promotion documents.`;
+  } catch (error) {
+    console.error('Error seeding promotions data to Firestore:', error);
+    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+      return "Error seeding promotions: Missing or insufficient Firestore permissions. Please check your Firestore security rules.";
+    }
+    if (error instanceof Error && (error.message.includes('Failed to get document because the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
+      return "Error seeding promotions: Could not reach Cloud Firestore. Check your internet connection and Firebase configuration.";
+    }
+    return `Error seeding promotions data: ${error instanceof Error ? error.message : String(error)}`;
   }
 }

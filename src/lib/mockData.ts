@@ -1,6 +1,6 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile, Locale } from './types';
-import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap } from 'lucide-react';
+import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Drama, Palette, Zap, Ticket } from 'lucide-react';
 
 
 interface LocalizedString {
@@ -43,10 +43,38 @@ export const mockAppointments: Appointment[] = [
   { id: 'a3', serviceName: 'Pasha\'s Skin Cleanse', barberName: 'Youssef "The Sculptor" Zaki', date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), time: '4:30 PM', status: 'Pending' },
 ];
 
-export const getMockPromotions = (locale: Locale): Promotion[] => [
-  { id: 'p1', title: t({ en: 'Mid-Week Majesty', ar: 'جلال منتصف الأسبوع' }, locale), description: t({ en: '20% off all services on Wednesdays!', ar: 'خصم 20% على جميع الخدمات أيام الأربعاء!' }, locale), couponCode: 'WEDNESDAY20', imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'salon interior promotion' },
-  { id: 'p2', title: t({ en: 'New Client Welcome', ar: 'ترحيب بالعميل الجديد' }, locale), description: t({ en: 'First-time customers get 15% off their first service.', ar: 'يحصل العملاء الجدد على خصم 15% على خدمتهم الأولى.' }, locale), imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'barber tools flatlay' },
+// Raw structure for seeding promotions
+export interface RawPromotionData {
+  id: string; 
+  title: { en: string; ar: string };
+  description: { en: string; ar: string };
+  couponCode?: string;
+  imageUrl?: string;
+  dataAiHint?: string;
+  icon?: LucideIcon; // Keep icon for mock data consistency, not stored in Firestore
+}
+
+const rawMockPromotionsData: RawPromotionData[] = [
+  { id: 'p1', title: { en: 'Mid-Week Majesty', ar: 'جلال منتصف الأسبوع' }, description: { en: '20% off all services on Wednesdays!', ar: 'خصم 20% على جميع الخدمات أيام الأربعاء!' }, couponCode: 'WEDNESDAY20', imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'salon interior promotion', icon: Percent },
+  { id: 'p2', title: { en: 'New Client Welcome', ar: 'ترحيب بالعميل الجديد' }, description: { en: 'First-time customers get 15% off their first service.', ar: 'يحصل العملاء الجدد على خصم 15% على خدمتهم الأولى.' }, imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'barber tools flatlay', icon: Star },
 ];
+
+// Function to get raw data for seeding
+export const getRawMockPromotions = (): RawPromotionData[] => rawMockPromotionsData;
+
+// Existing getMockPromotions will use this raw data
+export const getMockPromotions = (locale: Locale): Promotion[] => {
+  return rawMockPromotionsData.map(promo => ({
+    id: promo.id,
+    title: t(promo.title, locale),
+    description: t(promo.description, locale),
+    couponCode: promo.couponCode,
+    imageUrl: promo.imageUrl,
+    dataAiHint: promo.dataAiHint,
+    // icon: promo.icon, // Icon is for display, not part of Firestore data model for Promotion
+  }));
+};
+
 
 export const getMockReviews = (locale: Locale): Review[] => [
   { id: 'r1', customerName: 'Ali Hasan', serviceName: t({en: "Sultan's Haircut", ar: "قصة السلطان"}, locale), barberName: t({en: 'Ahmed "The Blade" Al-Fassi', ar: 'أحمد "الشفرة" الفاسي'}, locale), rating: 5, comment: t({en: 'Best haircut I\'ve had in years! Ahmed is a true artist.', ar: 'أفضل قصة شعر حصلت عليها منذ سنوات! أحمد فنان حقيقي.'}, locale), date: '2024-07-15', avatarUrl: 'https://placehold.co/100x100.png', dataAiHint: 'happy customer face' },
@@ -156,5 +184,4 @@ export const mockServices = getMockServices('en'); // Fallback or default locale
 export const mockPromotions = getMockPromotions('en'); // Fallback or default
 export const mockReviews = getMockReviews('en'); // Fallback or default
 export const mockUserProfile = getMockUserProfile('en'); // Fallback or default
-
     

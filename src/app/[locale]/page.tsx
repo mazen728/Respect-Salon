@@ -3,24 +3,57 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-// BarberCard import was removed as the section using it was deleted.
 import { PromotionCard } from '@/components/PromotionCard';
 import { ReviewCard } from '@/components/ReviewCard';
-import { salonInfo as getSalonInfo, getMockPromotions, getMockReviews } from '@/lib/mockData'; // getMockBarbers removed
-import { MapPin, Clock, Award, Users, Star, Scissors } from 'lucide-react';
-import type { Locale } from '@/lib/types';
+import { salonInfo as getSalonInfo, getMockReviews, getMockPromotions } from '@/lib/mockData';
+import { fetchPromotionsFromFirestore } from '@/lib/firebase';
+import { SeedPromotionsButton } from '@/components/SeedPromotionsButton';
+import { MapPin, Clock, Award, Users, Star, Scissors, AlertTriangle } from 'lucide-react';
+import type { Locale, Promotion } from '@/lib/types';
 
 interface HomePageProps {
   params: { locale: Locale };
 }
 
 export default async function HomePage({ params: { locale: currentLocale } }: HomePageProps) {
-  // const currentLocale = params.locale; // Changed to direct destructuring in signature
   const salonInfoData = getSalonInfo(currentLocale);
-  // mockBarbersData was removed as its section was deleted
-  const mockPromotionsData = getMockPromotions(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
+
+  let promotionsData: Promotion[] = [];
+  let promotionFetchError = false;
+  let usingFirestorePromotions = false;
+
+  try {
+    const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
+    if (firestorePromotions.length > 0) {
+      promotionsData = firestorePromotions;
+      usingFirestorePromotions = true;
+    } else {
+      console.warn(`No promotions found in Firestore for locale: ${currentLocale}. Falling back to mock data.`);
+      promotionsData = getMockPromotions(currentLocale); // Fallback
+    }
+  } catch (error) {
+    console.error("Error fetching promotions from Firestore, falling back to mock data:", error);
+    promotionFetchError = true;
+    promotionsData = getMockPromotions(currentLocale); // Fallback
+  }
+
+  const translationsAlerts = {
+    en: {
+      fetchErrorTitle: "Failed to Load Promotions",
+      fetchErrorDescription: "We couldn't fetch promotions from the database. Displaying sample promotions. Check connection or seed data.",
+      firestoreNote: "Displaying promotions from Firestore. If this list is empty or incorrect, ensure data is seeded.",
+      mockDataNote: "Displaying sample promotions. Please check Firestore connection or seed data if needed."
+    },
+    ar: {
+      fetchErrorTitle: "فشل تحميل العروض",
+      fetchErrorDescription: "لم نتمكن من جلب العروض من قاعدة البيانات. يتم عرض عروض تجريبية. تحقق من الاتصال أو قم بإضافة البيانات الأولية.",
+      firestoreNote: "يتم عرض العروض من Firestore. إذا كانت القائمة فارغة أو غير صحيحة، تأكد من إضافة البيانات الأولية.",
+      mockDataNote: "يتم عرض عروض تجريبية. يرجى التحقق من اتصال Firestore أو إضافة البيانات الأولية إذا لزم الأمر."
+    }
+  };
+  const tAlerts = translationsAlerts[currentLocale];
 
 
   return (
@@ -28,9 +61,7 @@ export default async function HomePage({ params: { locale: currentLocale } }: Ho
       {/* Hero Section */}
       <section className="container mx-auto text-center">
         <div className="relative w-full h-[400px] md:h-[500px] rounded-lg overflow-hidden shadow-2xl">
-          {/* Main background image removed */}
-          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center p-8"> {/* Ensured bg-black */}
-            {/* Logo */}
+          <div className="absolute inset-0 bg-black flex flex-col items-center justify-center p-8">
             <div className="mb-6">
               <Image
                 src="https://i.postimg.cc/xCBD2Mqx/respect-salon-150x150.png"
@@ -101,11 +132,36 @@ export default async function HomePage({ params: { locale: currentLocale } }: Ho
             <Award className="h-10 w-10 text-accent" />
             <h2 className="font-headline text-3xl font-semibold text-primary">{t('currentOffers')}</h2>
         </div>
-        <div className="space-y-6">
-          {mockPromotionsData.map((promotion) => (
-            <PromotionCard key={promotion.id} promotion={promotion} locale={currentLocale} />
-          ))}
-        </div>
+
+        <SeedPromotionsButton locale={currentLocale} />
+
+        {promotionFetchError && (
+          <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 me-2" />
+              <h3 className="font-semibold">{tAlerts.fetchErrorTitle}</h3>
+            </div>
+            <p className="text-sm">{tAlerts.fetchErrorDescription}</p>
+          </div>
+        )}
+
+        {!promotionFetchError && (
+          <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground">
+            {usingFirestorePromotions ? tAlerts.firestoreNote : tAlerts.mockDataNote}
+          </div>
+        )}
+        
+        {promotionsData.length > 0 ? (
+          <div className="space-y-6">
+            {promotionsData.map((promotion) => (
+              <PromotionCard key={promotion.id} promotion={promotion} locale={currentLocale} />
+            ))}
+          </div>
+        ) : (
+           <div className="text-center py-10">
+            <p className="text-xl text-muted-foreground">{currentLocale === 'ar' ? 'لا توجد عروض حالياً.' : 'No current offers available.'}</p>
+          </div>
+        )}
       </section>
 
       {/* Customer Testimonials Section */}
