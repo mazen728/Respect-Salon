@@ -63,8 +63,6 @@ export default async function HomePage({ params: { locale } }: { params: { local
   };
 
   const youtubeVideoId = "AeQH9veCMbw";
-  // Parameters: autoplay=1 (autoplay), mute=1 (mute), loop=1&playlist=VIDEO_ID (loop), controls=0 (hide controls), modestbranding=1, showinfo=0 (reduce YouTube branding/info)
-  // fs=0 (disable fullscreen button), disablekb=1 (disable keyboard controls), iv_load_policy=3 (disable annotations)
   const youtubeVideoUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0&disablekb=1&iv_load_policy=3`;
 
 
@@ -119,14 +117,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row items-center gap-8">
               <div className="md:w-1/2">
-                <Image
-                  src="https://i.postimg.cc/mDxr5Ztf/resized-image-2.jpg"
-                  alt={t('ourFeaturedLook')}
-                  width={600}
-                  height={400}
-                  className="rounded-lg shadow-xl"
-                  data-ai-hint="stylish haircut model"
-                />
+                {/* Image removed as per user request */}
               </div>
               <div className="md:w-1/2 text-center md:text-start">
                 <h2 className="text-4xl font-headline font-bold text-primary mb-4">{t('ourFeaturedLook')}</h2>
