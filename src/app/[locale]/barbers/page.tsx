@@ -32,24 +32,27 @@ const translations = {
 };
 
 export default async function BarbersPage({ params }: BarbersPageProps) {
-  const t = translations[params.locale] || translations.en;
+  await Promise.resolve(); // Ensure an async tick before accessing params
+  const currentLocale = params.locale;
+  const t = translations[currentLocale] || translations.en;
+  
   let barbers: Barber[] = [];
   let fetchError = false;
   let usingFirestoreData = false;
 
   try {
-    const firestoreBarbers = await fetchBarbersFromFirestore(params.locale);
+    const firestoreBarbers = await fetchBarbersFromFirestore(currentLocale);
     if (firestoreBarbers.length > 0) {
       barbers = firestoreBarbers;
       usingFirestoreData = true;
     } else {
-      console.warn(\`No barbers found in Firestore for locale: ${params.locale}. Falling back to mock data.\`);
-      barbers = getMockBarbers(params.locale);
+      // console.warn(\`No barbers found in Firestore for locale: ${currentLocale}. Falling back to mock data.\`);
+      barbers = getMockBarbers(currentLocale);
     }
   } catch (error) {
-    console.error("Error fetching barbers from Firestore, falling back to mock data:", error);
+    // console.error("Error fetching barbers from Firestore, falling back to mock data:", error);
     fetchError = true;
-    barbers = getMockBarbers(params.locale); 
+    barbers = getMockBarbers(currentLocale); 
   }
 
   return (
@@ -63,7 +66,7 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
       </div>
 
       {/* Add the SeedDataButton here */}
-      <SeedDataButton locale={params.locale} />
+      <SeedDataButton locale={currentLocale} />
 
       {fetchError && (
         <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
@@ -85,7 +88,7 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
       {barbers.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {barbers.map((barber) => (
-            <BarberCard key={barber.id} barber={barber} locale={params.locale} />
+            <BarberCard key={barber.id} barber={barber} locale={currentLocale} />
           ))}
         </div>
       ) : (
@@ -96,3 +99,5 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
     </div>
   );
 }
+
+    

@@ -6,17 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PromotionCard } from '@/components/PromotionCard';
 import { ReviewCard } from '@/components/ReviewCard';
-import { salonInfo as getSalonInfo, getMockPromotions, getMockReviews } from '@/lib/mockData';
-import { fetchPromotionsFromFirestore } from '@/lib/firebase';
-// import { SeedPromotionsButton } from '@/components/SeedPromotionsButton'; // تمت إزالته
+import { salonInfo as getSalonInfo, getMockReviews } from '@/lib/mockData';
+import { fetchPromotionsFromFirestore, getPromotionsVisibilitySetting } from '@/lib/firebase';
 import type { Locale, Promotion, Review } from '@/lib/types';
-import { Users, Percent, Star, MapPin, Sparkles, Ticket, AlertTriangle } from 'lucide-react';
+import { Percent, Star, MapPin, Ticket, AlertTriangle } from 'lucide-react';
 
 interface HomePageProps {
   params: { locale: Locale };
 }
 
 export default async function HomePage({ params }: HomePageProps) {
+  // First await operation
+  const promotionsVisible = await getPromotionsVisibilitySetting();
+  // console.log(`[HomePage] Promotions visibility from settings: ${promotionsVisible}`); // Kept for debugging if needed, can be removed
+
+  // Access params.locale AFTER an await
   const currentLocale = params.locale;
   const salonInfoData = getSalonInfo(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
@@ -26,22 +30,28 @@ export default async function HomePage({ params }: HomePageProps) {
   let firebaseErrorType: 'permission' | 'generic' | null = null;
   let usingFirestorePromotions = false;
 
-  try {
-    const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
-    if (firestorePromotions.length > 0) {
-      promotionsData = firestorePromotions;
-      usingFirestorePromotions = true;
-    } else {
-      console.warn(`[HomePage] No promotions to display for locale: ${currentLocale}. This could be due to empty Firestore collection or admin settings disabling promotions.`);
+
+  if (promotionsVisible) {
+    try {
+      const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
+      if (firestorePromotions.length > 0) {
+        promotionsData = firestorePromotions;
+        usingFirestorePromotions = true;
+        // console.log(`[HomePage] Successfully fetched ${promotionsData.length} promotions from Firestore for locale: ${currentLocale}.`);
+      } else {
+        // console.warn(`[HomePage] No promotions to display for locale: ${currentLocale}. Firestore collection might be empty.`);
+      }
+    } catch (error: any) {
+      // console.error("[HomePage] Error fetching promotions data:", error);
+      fetchError = true;
+      if (error.message && (error.message.toLowerCase().includes('permission') || error.message.toLowerCase().includes('denied'))) {
+        firebaseErrorType = 'permission';
+      } else {
+        firebaseErrorType = 'generic';
+      }
     }
-  } catch (error: any) {
-    console.error("[HomePage] Error fetching promotions data:", error);
-    fetchError = true;
-    if (error.message && (error.message.toLowerCase().includes('permission') || error.message.toLowerCase().includes('denied'))) {
-      firebaseErrorType = 'permission';
-    } else {
-      firebaseErrorType = 'generic';
-    }
+  } else {
+    // console.log("[HomePage] Promotions display is DISABLED by admin settings. Not fetching promotions.");
   }
   
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
@@ -145,7 +155,6 @@ export default async function HomePage({ params }: HomePageProps) {
 
         {/* Promotions Section Logic */}
         {fetchError ? (
-          // Case 0: Fetch Error for promotions
           <section className="py-16 bg-background">
             <div className="container mx-auto px-6 text-center">
               <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
@@ -155,11 +164,9 @@ export default async function HomePage({ params }: HomePageProps) {
                 </div>
                 <p>{getErrorMessage()}</p>
               </div>
-              {/* SeedPromotionsButton تمت إزالته من هنا */}
             </div>
           </section>
-        ) : promotionsData.length > 0 ? (
-          // Case 1: Promotions ARE available
+        ) : promotionsVisible && promotionsData.length > 0 ? (
           <section id="promotions" className="py-16 bg-background">
             <div className="container mx-auto px-6">
               <div className="text-center mb-12">
@@ -169,8 +176,6 @@ export default async function HomePage({ params }: HomePageProps) {
                   {currentLocale === 'ar' ? 'استفد من عروضنا الحصرية وخصوماتنا المميزة. تجديد مستمر لتستمتع بأفضل الخدمات بأفضل الأسعار.' : 'Take advantage of our exclusive offers and special discounts. Constantly updated for you to enjoy the best services at the best prices.'}
                 </p>
               </div>
-
-              {/* SeedPromotionsButton تمت إزالته من هنا */}
               
               {usingFirestorePromotions && ( 
                 <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground text-center">
@@ -186,7 +191,6 @@ export default async function HomePage({ params }: HomePageProps) {
             </div>
           </section>
         ) : (
-          // Case 2: NO Promotions to display (Firestore is empty, OR display disabled by settings)
           <section className="py-16 bg-background">
             <div className="container mx-auto px-6 text-center">
               <div className="py-10 bg-card rounded-lg shadow-lg my-8">
@@ -198,8 +202,6 @@ export default async function HomePage({ params }: HomePageProps) {
                   {currentLocale === 'ar' ? 'يرجى التحقق مرة أخرى لاحقًا لرؤية أحدث الصفقات!' : 'Please check back later to see our latest deals!'}
                 </p>
               </div>
-              
-              {/* SeedPromotionsButton تمت إزالته من هنا */}
               
               <div className="mt-6 p-3 border border-dashed rounded-md bg-secondary/20 text-sm text-muted-foreground">
                   {currentLocale === 'ar' ? 'لم يتم العثور على عروض في قاعدة البيانات، أو أن عرضها معطل حاليًا بواسطة إعدادات المسؤول.' : 'No promotions found in the database, or their display is currently disabled by admin settings.'}
@@ -266,3 +268,5 @@ export default async function HomePage({ params }: HomePageProps) {
     </div>
   );
 }
+
+    
