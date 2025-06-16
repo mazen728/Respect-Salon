@@ -31,10 +31,11 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  i18n: {
-    locales: ['en', 'ar'],
-    defaultLocale: 'en',
-  },
+  // Removed i18n block as it's for Pages Router and unsupported with App Router in this context
+  // i18n: {
+  //   locales: ['en', 'ar'],
+  //   defaultLocale: 'en',
+  // },
 };
 
 export default nextConfig;
