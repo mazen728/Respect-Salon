@@ -66,23 +66,15 @@ export default async function HomePage({ params }: HomePageProps) {
   };
 
   const youtubeVideoId = "AeQH9veCMbw";
-  const youtubeVideoUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0`;
+  const youtubeVideoUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0&disablekb=1&iv_load_policy=3`;
 
 
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="relative h-[70vh] min-h-[400px] flex items-center justify-center text-center bg-gradient-to-br from-primary/30 via-background to-background">
-          <Image
-            src="https://placehold.co/1200x800.png"
-            alt={t('welcomeToSalon')}
-            layout="fill"
-            objectFit="cover"
-            className="absolute inset-0 z-0 opacity-30"
-            data-ai-hint="barber shop atmosphere"
-            priority
-          />
+        <section className="relative h-[70vh] min-h-[400px] flex items-center justify-center text-center bg-black">
+          {/* Image removed, background set to bg-black */}
           <div className="relative z-10 p-6 bg-background/70 backdrop-blur-sm rounded-lg shadow-xl">
             <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary mb-4">
               {salonInfoData.name}
@@ -115,7 +107,8 @@ export default async function HomePage({ params }: HomePageProps) {
                 className="w-full h-full"
                 src={youtubeVideoUrl}
                 title={t('glimpseOfSalon')}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allow="autoplay; encrypted-media;"
+                allowFullScreen={false}
                 loading="lazy"
               ></iframe>
             </div>
