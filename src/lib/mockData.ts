@@ -105,7 +105,7 @@ const salonInfoEn = {
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
   socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
-    { name: { en: "Facebook", ar: "فيسبوك" }, url: "#", icon: Zap },
+    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/19SjodPc7s/", icon: Zap },
     { name: { en: "Twitter", ar: "تويتر" }, url: "#", icon: Zap },
   ],
   locationImage: "https://placehold.co/800x400.png",
@@ -145,7 +145,7 @@ const salonInfoAr: typeof salonInfoEn = {
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "#", icon: Zap },
-    { name: { en: "Facebook", ar: "فيسبوك" }, url: "#", icon: Zap },
+    { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/19SjodPc7s/", icon: Zap },
     { name: { en: "Twitter", ar: "تويتر" }, url: "#", icon: Zap },
   ],
   locationImage: "https://placehold.co/800x400.png",
