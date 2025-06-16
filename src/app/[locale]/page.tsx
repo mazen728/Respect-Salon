@@ -100,12 +100,12 @@ export default async function HomePage({ params: { locale } }: { params: { local
           <div className="container mx-auto px-6">
             <h2 className="text-4xl font-headline font-bold text-primary text-center mb-10">{t('glimpseOfSalon')}</h2>
             <div className="aspect-video w-full max-w-3xl mx-auto bg-muted rounded-lg shadow-lg overflow-hidden">
-              <iframe
+               <iframe
                 className="w-full h-full"
                 src={youtubeVideoUrl}
                 title={t('glimpseOfSalon')}
                 allow="autoplay; encrypted-media; picture-in-picture; loop"
-                allowFullScreen={false} 
+                allowFullScreen={false}
                 loading="lazy"
               ></iframe>
             </div>
@@ -156,8 +156,6 @@ export default async function HomePage({ params: { locale } }: { params: { local
                 </p>
               </div>
               
-              {/* Removed the 'usingFirestorePromotions' notification div */}
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {promotionsData.map((promo) => (
                   <PromotionCard key={promo.id} promotion={promo} locale={currentLocale} />
@@ -178,9 +176,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
                 </p>
               </div>
               
-              <div className="mt-6 p-3 border border-dashed rounded-md bg-secondary/20 text-sm text-muted-foreground">
-                  {currentLocale === 'ar' ? 'لم يتم العثور على عروض في قاعدة البيانات، أو أن عرضها معطل حاليًا بواسطة إعدادات المسؤول.' : 'No promotions found in the database, or their display is currently disabled by admin settings.'}
-              </div>
+              {/* Removed the notification div about no promotions found or disabled by admin */}
             </div>
           </section>
         )}
