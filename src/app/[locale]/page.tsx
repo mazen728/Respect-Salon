@@ -65,7 +65,7 @@ export default async function HomePage({ params }: HomePageProps) {
       : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
   };
 
-  const videoEmbedUrl = "https://drive.google.com/file/d/1s7PUc91aB0FpoJUlIJOjD-OIw83VYtXv/preview";
+  const videoEmbedUrl = "https://drive.google.com/file/d/1s7PUc91aB0FpoJUlIJOjD-OIw83VYtXv/preview?autoplay=1";
 
   return (
     <div className="flex flex-col min-h-screen">
