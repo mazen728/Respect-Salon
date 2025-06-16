@@ -14,7 +14,7 @@ import { Percent, Star, MapPin, Ticket, AlertTriangle, Instagram, Facebook } fro
 interface FetchedData {
   currentLocale: Locale;
   promotionsVisible: boolean;
-  salonInfoData: SalonInfoData; // Corrected type from mockData export
+  salonInfoData: SalonInfoData;
   mockReviewsData: Review[];
   promotionsData: Promotion[];
   fetchError: boolean;
@@ -22,14 +22,13 @@ interface FetchedData {
   usingFirestorePromotions: boolean;
 }
 
-async function fetchData(pageParams: { locale: Locale }): Promise<FetchedData> {
-  // Ensure an async tick before accessing params properties.
-  await Promise.resolve();
-  const currentLocale = pageParams.locale;
+// fetchData now accepts locale as a direct string argument
+async function fetchData(resolvedLocale: Locale): Promise<FetchedData> {
+  // resolvedLocale is already awaited and extracted by the caller (HomePage)
 
   const promotionsVisible = await getPromotionsVisibilitySetting();
-  const salonInfoData = getSalonInfo(currentLocale);
-  const mockReviewsData = getMockReviews(currentLocale);
+  const salonInfoData = getSalonInfo(resolvedLocale);
+  const mockReviewsData = getMockReviews(resolvedLocale);
 
   let promotionsData: Promotion[] = [];
   let fetchError = false;
@@ -39,7 +38,7 @@ async function fetchData(pageParams: { locale: Locale }): Promise<FetchedData> {
   if (promotionsVisible) {
     try
       {
-      const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
+      const firestorePromotions = await fetchPromotionsFromFirestore(resolvedLocale);
       if (firestorePromotions.length > 0) {
         promotionsData = firestorePromotions;
         usingFirestorePromotions = true;
@@ -55,7 +54,7 @@ async function fetchData(pageParams: { locale: Locale }): Promise<FetchedData> {
   }
 
   return {
-    currentLocale,
+    currentLocale: resolvedLocale, // Return the passed-in locale
     promotionsVisible,
     salonInfoData,
     mockReviewsData,
@@ -67,11 +66,11 @@ async function fetchData(pageParams: { locale: Locale }): Promise<FetchedData> {
 }
 
 export default async function HomePage({ params }: { params: { locale: Locale } }) {
-  // Initial await can remain, or be removed if all param usage is deferred. Kept for safety.
-  await Promise.resolve();
+  await Promise.resolve(); // Ensure params object itself is awaited/available
+  const pageLocale = params.locale; // Extract locale AFTER the await
 
   const {
-    currentLocale,
+    currentLocale, // This will be pageLocale
     promotionsVisible,
     salonInfoData,
     mockReviewsData,
@@ -79,21 +78,9 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     fetchError,
     firebaseErrorType,
     // usingFirestorePromotions, // Not directly used in JSX, but available
-  } = await fetchData(params);
+  } = await fetchData(pageLocale); // Pass the resolved pageLocale string
 
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
-
-  // getErrorMessage is not used in the current JSX structure after removing the error div
-  // const getErrorMessage = () => {
-  //   if (firebaseErrorType === 'permission') {
-  //     return currentLocale === 'ar'
-  //       ? 'حدث خطأ في الأذونات أثناء جلب العروض. يرجى التحقق من قواعد الأمان في Firestore والتأكد من أنها تسمح بالقراءة لمجموعتي `promotions` و `appSettings`.'
-  //       : 'Permission error fetching promotions. Please check Firestore security rules and ensure they allow read access for `promotions` and `appSettings` collections.';
-  //   }
-  //   return currentLocale === 'ar'
-  //     ? 'حدث خطأ غير متوقع أثناء محاولة جلب العروض. يرجى المحاولة مرة أخرى لاحقًا.'
-  //     : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
-  // };
 
   const youtubeVideoId = "AeQH9veCMbw";
   const youtubeEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0&disablekb=1&iv_load_policy=3`;
@@ -281,4 +268,3 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     </div>
   );
 }
-
