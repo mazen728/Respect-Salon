@@ -15,10 +15,11 @@ interface HomePageProps {
 }
 
 export default async function HomePage({ params }: HomePageProps) {
-  const salonInfoData = getSalonInfo(params.locale);
-  const mockBarbersData = getMockBarbers(params.locale);
-  const mockPromotionsData = getMockPromotions(params.locale);
-  const mockReviewsData = getMockReviews(params.locale);
+  const currentLocale = params.locale; // Explicitly resolve locale
+  const salonInfoData = getSalonInfo(currentLocale);
+  const mockBarbersData = getMockBarbers(currentLocale);
+  const mockPromotionsData = getMockPromotions(currentLocale);
+  const mockReviewsData = getMockReviews(currentLocale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
 
 
@@ -33,7 +34,7 @@ export default async function HomePage({ params }: HomePageProps) {
             <div className="mb-6">
               <Image
                 src="https://i.postimg.cc/xCBD2Mqx/respect-salon-150x150.png"
-                alt={params.locale === 'ar' ? "شعار صالون رسبيكت" : "Respect Salon Logo"}
+                alt={currentLocale === 'ar' ? "شعار صالون رسبيكت" : "Respect Salon Logo"}
                 width={150}
                 height={150}
                 className="object-contain"
@@ -48,7 +49,7 @@ export default async function HomePage({ params }: HomePageProps) {
               {t('experienceRoyalGrooming')}
             </p>
             <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-md shadow-lg">
-              <Link href={`/${params.locale}/services`}>{t('bookAppointment')}</Link>
+              <Link href={`/${currentLocale}/services`}>{t('bookAppointment')}</Link>
             </Button>
           </div>
         </div>
@@ -77,7 +78,7 @@ export default async function HomePage({ params }: HomePageProps) {
             </Card>
           </div>
           <div className="relative w-full h-80 rounded-lg overflow-hidden shadow-lg">
-             <Image src={salonInfoData.locationImage} alt={params.locale === 'ar' ? "موقع الصالون على الخريطة" : "Salon Map Location"} layout="fill" objectFit="cover" data-ai-hint={salonInfoData.locationDataAiHint}/>
+             <Image src={salonInfoData.locationImage} alt={currentLocale === 'ar' ? "موقع الصالون على الخريطة" : "Salon Map Location"} layout="fill" objectFit="cover" data-ai-hint={salonInfoData.locationDataAiHint}/>
           </div>
         </div>
       </section>
@@ -102,12 +103,12 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {mockBarbersData.map((barber) => (
-            <BarberCard key={barber.id} barber={barber} locale={params.locale} />
+            <BarberCard key={barber.id} barber={barber} locale={currentLocale} />
           ))}
         </div>
         <div className="text-center mt-8">
           <Button variant="outline" asChild>
-            <Link href={`/${params.locale}/barbers`}>{t('viewAllBarbers')}</Link>
+            <Link href={`/${currentLocale}/barbers`}>{t('viewAllBarbers')}</Link>
           </Button>
         </div>
       </section>
@@ -120,7 +121,7 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
         <div className="space-y-6">
           {mockPromotionsData.map((promotion) => (
-            <PromotionCard key={promotion.id} promotion={promotion} locale={params.locale} />
+            <PromotionCard key={promotion.id} promotion={promotion} locale={currentLocale} />
           ))}
         </div>
       </section>
@@ -133,7 +134,7 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {mockReviewsData.map((review) => (
-            <ReviewCard key={review.id} review={review} locale={params.locale} />
+            <ReviewCard key={review.id} review={review} locale={currentLocale} />
           ))}
         </div>
       </section>
