@@ -65,8 +65,8 @@ export default async function HomePage({ params }: HomePageProps) {
       : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
   };
 
-  const youtubeVideoId = "AeQH9veCMbw";
-  const videoEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&showinfo=0&modestbranding=1`;
+  // Placeholder video URL. Replace this with the actual URL of your video from the database/gallery.
+  const galleryVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
 
 
   return (
@@ -111,14 +111,18 @@ export default async function HomePage({ params }: HomePageProps) {
           <div className="container mx-auto px-6">
             <h2 className="text-4xl font-headline font-bold text-primary text-center mb-10">{t('glimpseOfSalon')}</h2>
             <div className="aspect-video w-full max-w-3xl mx-auto bg-muted rounded-lg shadow-lg overflow-hidden">
-              <iframe
-                className="w-full h-full"
-                src={videoEmbedUrl}
-                title={t('glimpseOfSalon')}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              ></iframe>
+              <video
+                className="w-full h-full object-cover"
+                src={galleryVideoUrl}
+                controls
+                autoPlay
+                muted
+                loop
+                playsInline
+                aria-label={t('glimpseOfSalon')}
+              >
+                {currentLocale === 'ar' ? 'متصفحك لا يدعم وسم الفيديو.' : 'Your browser does not support the video tag.'}
+              </video>
             </div>
           </div>
         </section>
