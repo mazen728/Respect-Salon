@@ -7,7 +7,7 @@ import { PromotionCard } from '@/components/PromotionCard';
 import { ReviewCard } from '@/components/ReviewCard';
 import { salonInfo as getSalonInfo, getMockReviews, getMockPromotions } from '@/lib/mockData';
 import { fetchPromotionsFromFirestore } from '@/lib/firebase';
-import { SeedPromotionsButton } from '@/components/SeedPromotionsButton';
+// import { SeedPromotionsButton } from '@/components/SeedPromotionsButton'; // Removed
 import { MapPin, Clock, Award, Users, Star, Scissors, AlertTriangle } from 'lucide-react';
 import type { Locale, Promotion } from '@/lib/types';
 
@@ -134,7 +134,7 @@ export default async function HomePage({ params }: HomePageProps) {
             <h2 className="font-headline text-3xl font-semibold text-primary">{t('currentOffers')}</h2>
         </div>
 
-        <SeedPromotionsButton locale={currentLocale} />
+        {/* SeedPromotionsButton was here, now removed */}
 
         {promotionFetchError && (
           <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
