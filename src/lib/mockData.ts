@@ -100,7 +100,7 @@ export const getMockUserProfile = (locale: Locale): UserProfile => ({
 const salonInfoEn = {
   name: "Respect Salon",
   address: "191 Abdel Salam Aref St. - Louran",
-  workingHours: "Mon-Sat: 9 AM - 8 PM, Sun: 10 AM - 6 PM",
+  workingHours: "Daily: 1:00 PM - 1:00 AM",
   phone: "035836388",
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
   socialMedia: [
@@ -139,7 +139,7 @@ const salonInfoEn = {
 const salonInfoAr: typeof salonInfoEn = {
   name: "صالون رسبيكت",
   address: "191 ش عبد السلام عارف - لوران",
-  workingHours: "الاثنين-السبت: 9 صباحًا - 8 مساءً، الأحد: 10 صباحًا - 6 مساءً",
+  workingHours: "يومياً: 1:00 ظهراً - 1:00 صباحاً",
   phone: "035836388",
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
    socialMedia: [
