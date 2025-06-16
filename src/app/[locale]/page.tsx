@@ -15,7 +15,8 @@ interface HomePageProps {
   params: { locale: Locale };
 }
 
-export default async function HomePage({ params: { locale: currentLocale } }: HomePageProps) {
+export default async function HomePage({ params }: HomePageProps) {
+  const currentLocale = params.locale;
   const salonInfoData = getSalonInfo(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
