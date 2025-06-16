@@ -133,48 +133,57 @@ export async function seedBarbersData(): Promise<string> {
 // Function to get the global setting for promotions visibility
 export async function getPromotionsVisibilitySetting(): Promise<boolean> {
   if (!firebaseConfig.projectId) {
-    console.warn("Firebase project ID not configured. Cannot fetch app settings.");
-    return false; // Default to not showing if project ID is missing
+    console.warn("[Firebase Settings] Firebase project ID not configured. Cannot fetch app settings. Defaulting to false.");
+    return false; 
   }
   try {
     const settingsDocRef = doc(db, 'appSettings', 'main');
     const docSnap = await getDoc(settingsDocRef);
 
     if (docSnap.exists() && docSnap.data().promotionsVisible === true) {
+      console.log("[Firebase Settings] promotionsVisible is TRUE in appSettings/main.");
       return true;
     }
-    // If doc doesn't exist, field doesn't exist, or field is false, return false.
+    console.log("[Firebase Settings] promotionsVisible is FALSE or document/field does not exist in appSettings/main.");
     return false;
   } catch (error) {
-    console.error("Error fetching promotions visibility setting:", error);
-    return false; // Default to false on error
+    console.error("[Firebase Settings] Error fetching promotions visibility setting:", error);
+    return false; 
   }
 }
 
 // Function to fetch promotions from Firestore
 export async function fetchPromotionsFromFirestore(locale: Locale): Promise<Promotion[]> {
   if (!firebaseConfig.projectId) {
-    console.warn("Firebase project ID not configured. Firestore fetch skipped for promotions.");
+    console.warn("[Firebase Fetch] Firebase project ID not configured. Firestore fetch skipped for promotions.");
     return [];
   }
 
   const promotionsAreVisible = await getPromotionsVisibilitySetting();
+  // The log for promotionsAreVisible value is now inside getPromotionsVisibilitySetting
+
   if (!promotionsAreVisible) {
-    console.warn("Promotions display is disabled by admin settings in appSettings/main (promotionsVisible field).");
+    console.warn("[Firebase Fetch] Promotions display is DISABLED by admin settings (promotionsVisible=false or not found). Returning empty list for promotions.");
     return [];
   }
 
+  console.log("[Firebase Fetch] Promotions display is ENABLED. Proceeding to fetch from 'promotions' collection...");
   try {
     const promotionsRef = collection(db, 'promotions');
     const querySnapshot = await getDocs(promotionsRef);
+    console.log(`[Firebase Fetch] Fetched ${querySnapshot.size} documents from 'promotions' collection.`);
 
     if (querySnapshot.empty) {
-      console.log(`No promotions found in Firestore.`);
+      console.log("[Firebase Fetch] 'promotions' collection is empty. Returning empty list.");
       return [];
     }
 
     const promotions: Promotion[] = querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
+      // Log the data for one document to check its structure
+      if (querySnapshot.docs.indexOf(docSnapshot) === 0) { // Log only the first document's data for brevity
+          console.log("[Firebase Fetch] Data of first promotion document:", JSON.stringify(data, null, 2));
+      }
       return {
         id: docSnapshot.id,
         title: locale === 'ar' ? data.title_ar : data.title_en,
@@ -184,14 +193,15 @@ export async function fetchPromotionsFromFirestore(locale: Locale): Promise<Prom
         dataAiHint: data.dataAiHint || 'discount offer',
       } as Promotion;
     });
+    console.log(`[Firebase Fetch] Successfully mapped ${promotions.length} promotions for locale '${locale}'.`);
     return promotions;
   } catch (error) {
-    console.error(`Error fetching promotions from Firestore for locale ${locale}:`, error);
+    console.error(`[Firebase Fetch] Error fetching promotions from Firestore for locale ${locale}:`, error);
     if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
-      console.error("Firestore Security Rules might be denying access for promotions.");
+      console.error("[Firebase Fetch] Firestore Security Rules might be denying access for 'promotions' collection.");
     }
     if (error instanceof Error && (error.message.includes('Failed to get document because the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
-      console.error("Could not reach Cloud Firestore for promotions. Check your internet connection and Firebase configuration.");
+      console.error("[Firebase Fetch] Could not reach Cloud Firestore for 'promotions'. Check your internet connection and Firebase configuration.");
     }
     return [];
   }
@@ -229,20 +239,20 @@ export async function seedPromotionsData(): Promise<string> {
       });
       await batch.commit();
       promotionsSeededMessage = `Successfully seeded ${count} promotion documents.`;
-      console.log(promotionsSeededMessage);
+      console.log(`[Firebase Seed] ${promotionsSeededMessage}`);
     } else {
-      console.log('Promotions data likely already exists in Firestore. Seeding skipped to avoid duplication.');
+      console.log('[Firebase Seed] Promotions data likely already exists in Firestore. Seeding skipped to avoid duplication.');
     }
 
     // Ensure promotions visibility is enabled
     const settingsRef = doc(db, 'appSettings', 'main');
     await setDoc(settingsRef, { promotionsVisible: true }, { merge: true });
-    console.log('Successfully ensured promotionsVisible is true in appSettings/main.');
+    console.log('[Firebase Seed] Successfully ensured promotionsVisible is true in appSettings/main.');
     
     return `${promotionsSeededMessage} Promotions display setting is now ON.`;
 
   } catch (error) {
-    console.error('Error during promotions seeding process:', error);
+    console.error('[Firebase Seed] Error during promotions seeding process:', error);
     let specificError = "";
     if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
       specificError = "Missing or insufficient Firestore permissions. Please check your Firestore security rules.";
