@@ -82,7 +82,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
 
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
 
-  const youtubeVideoId = "AeQH9veCMbw";
+  const youtubeVideoId = "KwBadz1zX1g";
   const youtubeEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0&disablekb=1&iv_load_policy=3`;
 
 
@@ -152,13 +152,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
         </section>
 
         {/* Promotions Section Logic */}
-        {fetchError ? (
-          <section className="py-16 bg-background">
-            <div className="container mx-auto px-6 text-center">
-              {/* Error display div previously here was removed */}
-            </div>
-          </section>
-        ) : promotionsVisible && promotionsData.length > 0 ? (
+        {promotionsVisible && promotionsData.length > 0 ? (
           <section id="promotions" className="py-16 bg-background">
             <div className="container mx-auto px-6">
               <div className="text-center mb-12">
