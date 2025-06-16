@@ -16,15 +16,16 @@ interface HomePageProps {
 }
 
 export default async function HomePage({ params }: HomePageProps) {
-  // Ensure an async tick occurs BEFORE accessing params.locale
-  await Promise.resolve();
-  const localeParam = params.locale; // Read locale from params early
+  // Ensure an async tick occurs BEFORE accessing params.locale, but primary access will be after first real await.
+  await Promise.resolve(); 
+  
+  // Perform the first "real" async operation.
+  const promotionsVisible = await getPromotionsVisibilitySetting(); 
 
-  // Then proceed with other async operations and logic
-  const promotionsVisible = await getPromotionsVisibilitySetting(); // First "real" await
-
-  // Now that a real await has completed, define currentLocale and use it for synchronous data
+  // Now that a real await has completed, it should be safe to access params.locale
+  const localeParam = params.locale; // Read locale from params AFTER the first substantive await
   const currentLocale = localeParam;
+
   const salonInfoData = getSalonInfo(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
 
@@ -35,6 +36,7 @@ export default async function HomePage({ params }: HomePageProps) {
 
   if (promotionsVisible) {
     try {
+      // Pass currentLocale (derived from params.locale post-await) to the fetch function
       const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
       if (firestorePromotions.length > 0) {
         promotionsData = firestorePromotions;
