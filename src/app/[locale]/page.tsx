@@ -65,11 +65,8 @@ export default async function HomePage({ params }: HomePageProps) {
       : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
   };
 
-  // Vimeo video URL: https://vimeo.com/1093838887/18485a1f7d
-  // Video ID: 1093838887, Hash: 18485a1f7d
-  const vimeoVideoId = "1093838887";
-  const vimeoHash = "18485a1f7d";
-  const galleryVideoUrl = `https://player.vimeo.com/video/${vimeoVideoId}?h=${vimeoHash}&background=1`;
+  const youtubeVideoId = "AeQH9veCMbw";
+  const youtubeVideoUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0`;
 
 
   return (
@@ -116,9 +113,9 @@ export default async function HomePage({ params }: HomePageProps) {
             <div className="aspect-video w-full max-w-3xl mx-auto bg-muted rounded-lg shadow-lg overflow-hidden">
               <iframe
                 className="w-full h-full"
-                src={galleryVideoUrl}
+                src={youtubeVideoUrl}
                 title={t('glimpseOfSalon')}
-                allow="autoplay"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 loading="lazy"
               ></iframe>
             </div>
