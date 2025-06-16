@@ -65,8 +65,11 @@ export default async function HomePage({ params }: HomePageProps) {
       : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
   };
 
-  // Placeholder video URL. Replace this with the actual URL of your video from the database/gallery.
-  const galleryVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+  // Vimeo video URL: https://vimeo.com/1093838887/18485a1f7d
+  // Video ID: 1093838887, Hash: 18485a1f7d
+  const vimeoVideoId = "1093838887";
+  const vimeoHash = "18485a1f7d";
+  const galleryVideoUrl = `https://player.vimeo.com/video/${vimeoVideoId}?h=${vimeoHash}&autoplay=1&loop=1&muted=1&title=0&byline=0&portrait=0&pip=0`;
 
 
   return (
@@ -111,18 +114,14 @@ export default async function HomePage({ params }: HomePageProps) {
           <div className="container mx-auto px-6">
             <h2 className="text-4xl font-headline font-bold text-primary text-center mb-10">{t('glimpseOfSalon')}</h2>
             <div className="aspect-video w-full max-w-3xl mx-auto bg-muted rounded-lg shadow-lg overflow-hidden">
-              <video
-                className="w-full h-full object-cover"
+              <iframe
+                className="w-full h-full"
                 src={galleryVideoUrl}
-                controls
-                autoPlay
-                muted
-                loop
-                playsInline
-                aria-label={t('glimpseOfSalon')}
-              >
-                {currentLocale === 'ar' ? 'متصفحك لا يدعم وسم الفيديو.' : 'Your browser does not support the video tag.'}
-              </video>
+                title={t('glimpseOfSalon')}
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              ></iframe>
             </div>
           </div>
         </section>
