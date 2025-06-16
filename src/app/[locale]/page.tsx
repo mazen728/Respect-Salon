@@ -11,20 +11,17 @@ import { fetchPromotionsFromFirestore, getPromotionsVisibilitySetting } from '@/
 import type { Locale, Promotion, Review } from '@/lib/types';
 import { Percent, Star, MapPin, Ticket, AlertTriangle } from 'lucide-react';
 
-interface HomePageProps {
-  params: { locale: Locale };
-}
+// No longer strictly needed if we destructure params directly in the function signature
+// interface HomePageProps {
+//   params: { locale: Locale };
+// }
 
-export default async function HomePage({ params }: HomePageProps) {
-  // Ensure an async tick occurs BEFORE accessing params.locale, but primary access will be after first real await.
-  await Promise.resolve(); 
-  
+export default async function HomePage({ params: { locale } }: { params: { locale: Locale } }) {
+  // Use the destructured locale directly
+  const currentLocale = locale;
+
   // Perform the first "real" async operation.
-  const promotionsVisible = await getPromotionsVisibilitySetting(); 
-
-  // Now that a real await has completed, it should be safe to access params.locale
-  const localeParam = params.locale; // Read locale from params AFTER the first substantive await
-  const currentLocale = localeParam;
+  const promotionsVisible = await getPromotionsVisibilitySetting();
 
   const salonInfoData = getSalonInfo(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
@@ -36,7 +33,7 @@ export default async function HomePage({ params }: HomePageProps) {
 
   if (promotionsVisible) {
     try {
-      // Pass currentLocale (derived from params.locale post-await) to the fetch function
+      // Pass currentLocale to the fetch function
       const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
       if (firestorePromotions.length > 0) {
         promotionsData = firestorePromotions;
@@ -66,6 +63,8 @@ export default async function HomePage({ params }: HomePageProps) {
   };
 
   const youtubeVideoId = "AeQH9veCMbw";
+  // Parameters: autoplay=1 (autoplay), mute=1 (mute), loop=1&playlist=VIDEO_ID (loop), controls=0 (hide controls), modestbranding=1, showinfo=0 (reduce YouTube branding/info)
+  // fs=0 (disable fullscreen button), disablekb=1 (disable keyboard controls), iv_load_policy=3 (disable annotations)
   const youtubeVideoUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0&disablekb=1&iv_load_policy=3`;
 
 
@@ -108,7 +107,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 src={youtubeVideoUrl}
                 title={t('glimpseOfSalon')}
                 allow="autoplay; encrypted-media;"
-                allowFullScreen={false}
+                allowFullScreen={false} // Explicitly false to prevent fullscreen
                 loading="lazy"
               ></iframe>
             </div>
@@ -257,4 +256,3 @@ export default async function HomePage({ params }: HomePageProps) {
     </div>
   );
 }
-

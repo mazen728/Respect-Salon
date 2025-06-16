@@ -4,90 +4,96 @@
 
 @layer base {
   :root {
-    --background: 0 0% 12%; /* Dark Gray, from image background - slightly lighter */
+    --background: 0 0% 0%; /* Pure Black */
     --foreground: 0 0% 90%; /* Light Gray, for text on dark background */
 
-    --card: 0 0% 15%; /* Slightly lighter dark gray for cards */
+    --card: 0 0% 10%; /* Slightly lighter than pure black for cards */
     --card-foreground: 0 0% 90%;
 
-    --popover: 0 0% 12%; /* Dark popover background */
+    --popover: 0 0% 5%; /* Dark popover background */
     --popover-foreground: 0 0% 90%;
 
-    --primary: 40 100% 55%; /* Vibrant Orange-Gold, from image logo */
-    --primary-foreground: 40 30% 10%; /* Dark text for contrast on primary gold */
+    --primary: 35 85% 55%; /* Deep Crimson (approximated from #8B0000) */
+    --primary-foreground: 0 0% 100%; /* White for contrast on deep crimson */
 
-    --secondary: 0 0% 25%; /* Medium Dark Gray for secondary elements */
-    --secondary-foreground: 0 0% 80%; /* Medium Light Gray for secondary text */
+    --secondary: 40 13% 96%; /* Soft Beige (approximated from #F5F5DC) - for light mode, or specific sections */
+    --secondary-foreground: 0 0% 20%; /* Darker text for beige background */
+    
+    /* For dark theme, secondary can be a dark gray if beige isn't suitable everywhere */
+    /* --secondary-dark: 0 0% 15%; */
+    /* --secondary-foreground-dark: 0 0% 80%; */
 
-    --muted: 0 0% 20%; /* Darker Muted Gray */
+
+    --muted: 0 0% 15%; /* Darker Muted Gray */
     --muted-foreground: 0 0% 60%; /* Lighter Muted Gray text */
 
-    --accent: 45 100% 60%; /* Bright Yellow-Gold, from image logo highlights */
-    --accent-foreground: 45 30% 10%; /* Dark text for contrast on accent gold */
+    --accent: 40 70% 45%; /* Muted Gold (approximated from #B8860B) */
+    --accent-foreground: 0 0% 100%; /* White/very light text for contrast on muted gold */
 
     --destructive: 0 70% 50%; /* Standard destructive red */
     --destructive-foreground: 0 0% 98%; /* Light text on destructive */
 
-    --border: 0 0% 25%; /* Dark border, matches secondary */
-    --input: 0 0% 18%; /* Dark input background */
-    --ring: 45 100% 55%; /* Gold for rings, consistent with accent/primary */
+    --border: 0 0% 20%; /* Dark border */
+    --input: 0 0% 12%; /* Dark input background */
+    --ring: 35 85% 60%; /* Crimson for rings, consistent with primary */
 
-    --chart-1: 40 90% 50%;
-    --chart-2: 45 80% 55%;
-    --chart-3: 50 70% 60%;
-    --chart-4: 35 85% 45%;
-    --chart-5: 30 75% 40%;
+    --chart-1: 35 80% 50%;
+    --chart-2: 40 75% 55%;
+    --chart-3: 45 70% 60%;
+    --chart-4: 30 80% 45%;
+    --chart-5: 25 75% 40%;
     --radius: 0.5rem;
 
     /* Sidebar variables for the new dark theme */
-    --sidebar-background: 0 0% 12%; 
+    --sidebar-background: 0 0% 8%; 
     --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 40 100% 55%;
-    --sidebar-primary-foreground: 40 30% 10%;
-    --sidebar-accent: 45 100% 60%;
-    --sidebar-accent-foreground: 45 30% 10%;
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 45 100% 55%;
+    --sidebar-primary: 35 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 70% 45%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 35 85% 60%;
   }
 
   .dark {
-    --background: 0 0% 12%; /* Dark Gray, from image background - slightly lighter */
-    --foreground: 0 0% 90%; /* Light Gray, for text on dark background */
+    --background: 0 0% 0%; /* Pure Black */
+    --foreground: 0 0% 90%; 
 
-    --card: 0 0% 15%; /* Slightly lighter dark gray for cards */
+    --card: 0 0% 10%; 
     --card-foreground: 0 0% 90%;
 
-    --popover: 0 0% 12%; /* Dark popover background */
+    --popover: 0 0% 5%; 
     --popover-foreground: 0 0% 90%;
 
-    --primary: 40 100% 55%; /* Vibrant Orange-Gold, from image logo */
-    --primary-foreground: 40 30% 10%; /* Dark text for contrast on primary gold */
+    --primary: 35 85% 55%; 
+    --primary-foreground: 0 0% 100%; 
 
-    --secondary: 0 0% 25%; /* Medium Dark Gray for secondary elements */
-    --secondary-foreground: 0 0% 80%; /* Medium Light Gray for secondary text */
+    /* If secondary is used as a general dark theme element, make it dark */
+    --secondary: 0 0% 15%; 
+    --secondary-foreground: 0 0% 80%;
 
-    --muted: 0 0% 20%; /* Darker Muted Gray */
-    --muted-foreground: 0 0% 60%; /* Lighter Muted Gray text */
+    --muted: 0 0% 15%; 
+    --muted-foreground: 0 0% 60%; 
 
-    --accent: 45 100% 60%; /* Bright Yellow-Gold, from image logo highlights */
-    --accent-foreground: 45 30% 10%; /* Dark text for contrast on accent gold */
+    --accent: 40 70% 45%; 
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 50%; /* Standard destructive red */
-    --destructive-foreground: 0 0% 98%; /* Light text on destructive */
+    --destructive: 0 70% 50%; 
+    --destructive-foreground: 0 0% 98%; 
 
-    --border: 0 0% 25%; /* Dark border, matches secondary */
-    --input: 0 0% 18%; /* Dark input background */
-    --ring: 45 100% 55%; /* Gold for rings, consistent with accent/primary */
+    --border: 0 0% 20%; 
+    --input: 0 0% 12%; 
+    --ring: 35 85% 60%; 
     
     /* Sidebar variables - dark theme */
-    --sidebar-background: 0 0% 12%; 
+    --sidebar-background: 0 0% 8%; 
     --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 40 100% 55%;
-    --sidebar-primary-foreground: 40 30% 10%;
-    --sidebar-accent: 45 100% 60%;
-    --sidebar-accent-foreground: 45 30% 10%;
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 45 100% 55%;
+    --sidebar-primary: 35 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 70% 45%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 35 85% 60%;
   }
 }
 
