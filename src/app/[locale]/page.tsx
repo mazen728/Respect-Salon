@@ -9,7 +9,7 @@ import { salonInfo as getSalonInfo, getMockPromotions, getMockReviews } from '@/
 import { fetchPromotionsFromFirestore } from '@/lib/firebase';
 import { SeedPromotionsButton } from '@/components/SeedPromotionsButton';
 import type { Locale, Promotion, Review } from '@/lib/types';
-import { Users, Percent, Star, MapPin, Sparkles } from 'lucide-react';
+import { Users, Percent, Star, MapPin, Sparkles, Ticket } from 'lucide-react'; // Added Ticket icon
 
 interface HomePageProps {
   params: { locale: Locale };
@@ -30,14 +30,23 @@ export default async function HomePage({ params }: HomePageProps) {
       promotionsData = firestorePromotions;
       usingFirestorePromotions = true;
     } else {
-      console.warn(`No promotions found in Firestore for locale: ${currentLocale}. Falling back to mock data.`);
-      promotionsData = getMockPromotions(currentLocale); // Fallback
+      // If Firestore returns no promotions, promotionsData will be empty.
+      // We will rely on the length check later to display "no promotions".
+      // If we want to fall back to mocks when Firestore is empty (not just on error), this logic would change.
+      // For now, an empty Firestore result means no promotions.
+      console.warn(`No promotions found in Firestore for locale: ${currentLocale}. Displaying 'no promotions' message if applicable.`);
+      // We don't set promotionsData to mock here if Firestore is just empty but successfully queried.
+      // Fallback to mock only happens on actual fetchError.
     }
   } catch (error) {
     console.error("Error fetching promotions from Firestore, falling back to mock data:", error);
     fetchError = true;
-    promotionsData = getMockPromotions(currentLocale); // Fallback
+    promotionsData = getMockPromotions(currentLocale); // Fallback to mock on error
   }
+  
+  // If there was no fetch error, but firestore had no data, promotionsData would be empty.
+  // If there was a fetch error, promotionsData would be mock data.
+  // If mock data was also empty (not currently the case), then promotionsData would be empty.
 
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
 
@@ -138,7 +147,6 @@ export default async function HomePage({ params }: HomePageProps) {
               </p>
             </div>
 
-            {/* Seed Promotions Button */}
             <SeedPromotionsButton locale={currentLocale} />
 
             {fetchError && (
@@ -146,9 +154,12 @@ export default async function HomePage({ params }: HomePageProps) {
                 <p>{currentLocale === 'ar' ? 'حدث خطأ أثناء جلب العروض. يتم عرض البيانات الافتراضية.' : 'Error fetching promotions. Displaying fallback data.'}</p>
               </div>
             )}
-            {!fetchError && (
+            {!fetchError && promotionsData.length > 0 && ( // Only show this note if not error AND there is data to show
               <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground text-center">
-                {usingFirestorePromotions ? (currentLocale === 'ar' ? 'يتم عرض العروض من قاعدة البيانات.' : 'Displaying promotions from Firestore.') : (currentLocale === 'ar' ? 'يتم عرض العروض من البيانات الوهمية.' : 'Displaying mock promotions data.')}
+                {usingFirestorePromotions ? 
+                    (currentLocale === 'ar' ? 'يتم عرض العروض من قاعدة البيانات.' : 'Displaying promotions from Firestore.') : 
+                    (currentLocale === 'ar' ? 'يتم عرض العروض من البيانات الوهمية (فشل الاتصال بـ Firestore أو لا يوجد معرّف مشروع).' : 'Displaying mock promotions data (Firestore connection failed or no project ID).')
+                }
               </div>
             )}
 
@@ -159,7 +170,18 @@ export default async function HomePage({ params }: HomePageProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">{currentLocale === 'ar' ? 'لا توجد عروض حالياً.' : 'No current promotions available.'}</p>
+              // Enhanced "No promotions" message
+              // This block is shown if promotionsData is empty, regardless of fetchError.
+              // If fetchError was true, the error message above would have already been shown.
+              <div className="text-center py-10 bg-card rounded-lg my-8 shadow">
+                <Ticket className="h-16 w-16 text-muted-foreground mx-auto mb-6 opacity-60" />
+                <p className="text-xl font-semibold text-primary mb-2">
+                  {currentLocale === 'ar' ? 'لا توجد عروض متوفرة حالياً' : 'No Current Promotions'}
+                </p>
+                <p className="text-muted-foreground">
+                  {currentLocale === 'ar' ? 'يرجى التحقق مرة أخرى لاحقًا لرؤية أحدث الصفقات!' : 'Please check back later to see our latest deals!'}
+                </p>
+              </div>
             )}
           </div>
         </section>
