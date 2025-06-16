@@ -16,12 +16,12 @@ interface HomePageProps {
 }
 
 export default async function HomePage({ params }: HomePageProps) {
-  // First await operation
-  const promotionsVisible = await getPromotionsVisibilitySetting();
-  // console.log(`[HomePage] Promotions visibility from settings: ${promotionsVisible}`); // Kept for debugging if needed, can be removed
+  // Ensure an async tick occurs BEFORE accessing params.locale
+  await Promise.resolve();
+  const currentLocale = params.locale; // Define currentLocale immediately after the await
 
-  // Access params.locale AFTER an await
-  const currentLocale = params.locale;
+  // Then proceed with other async operations and logic
+  const promotionsVisible = await getPromotionsVisibilitySetting();
   const salonInfoData = getSalonInfo(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
 
