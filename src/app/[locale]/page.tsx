@@ -3,10 +3,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarberCard } from '@/components/BarberCard';
+// BarberCard import was removed as the section using it was deleted.
 import { PromotionCard } from '@/components/PromotionCard';
 import { ReviewCard } from '@/components/ReviewCard';
-import { salonInfo as getSalonInfo, getMockBarbers, getMockPromotions, getMockReviews } from '@/lib/mockData';
+import { salonInfo as getSalonInfo, getMockPromotions, getMockReviews } from '@/lib/mockData'; // getMockBarbers removed
 import { MapPin, Clock, Award, Users, Star, Scissors } from 'lucide-react';
 import type { Locale } from '@/lib/types';
 
@@ -14,10 +14,10 @@ interface HomePageProps {
   params: { locale: Locale };
 }
 
-export default async function HomePage({ params }: HomePageProps) {
-  const currentLocale = params.locale; // Explicitly resolve locale
+export default async function HomePage({ params: { locale: currentLocale } }: HomePageProps) {
+  // const currentLocale = params.locale; // Changed to direct destructuring in signature
   const salonInfoData = getSalonInfo(currentLocale);
-  const mockBarbersData = getMockBarbers(currentLocale);
+  // mockBarbersData was removed as its section was deleted
   const mockPromotionsData = getMockPromotions(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
