@@ -63,7 +63,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
   };
 
   const youtubeVideoId = "AeQH9veCMbw";
-  const youtubeVideoUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0&disablekb=1&iv_load_policy=3`;
+  const youtubeEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0&disablekb=1&iv_load_policy=3`;
 
 
   return (
@@ -86,7 +86,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
         </section>
 
         {/* About Us Section */}
-        <section className="py-12 bg-secondary"> {/* Changed py-8 to py-12 */}
+        <section className="py-12 bg-secondary">
           <div className="container mx-auto px-6 text-center">
             <h2 className="text-4xl font-headline font-bold text-primary mb-6">{t('aboutUs')}</h2>
             <p className="text-lg text-secondary-foreground max-w-3xl mx-auto leading-relaxed">
@@ -102,9 +102,9 @@ export default async function HomePage({ params: { locale } }: { params: { local
             <div className="aspect-video w-full max-w-3xl mx-auto bg-muted rounded-lg shadow-lg overflow-hidden">
                <iframe
                 className="w-full h-full"
-                src={youtubeVideoUrl}
+                src={youtubeEmbedUrl}
                 title={t('glimpseOfSalon')}
-                allow="autoplay; encrypted-media; picture-in-picture; loop"
+                allow="autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen={false}
                 loading="lazy"
               ></iframe>
@@ -175,8 +175,6 @@ export default async function HomePage({ params: { locale } }: { params: { local
                   {currentLocale === 'ar' ? 'يرجى التحقق مرة أخرى لاحقًا لرؤية أحدث الصفقات!' : 'Please check back later to see our latest deals!'}
                 </p>
               </div>
-              
-              {/* Removed the notification div about no promotions found or disabled by admin */}
             </div>
           </section>
         )}
@@ -223,14 +221,8 @@ export default async function HomePage({ params: { locale } }: { params: { local
                   </CardContent>
                 </Card>
               </div>
-              <div className="h-80 md:h-96 rounded-lg overflow-hidden shadow-xl">
-                <Image
-                  src={salonInfoData.locationImage}
-                  alt={currentLocale === 'ar' ? `موقع ${salonInfoData.name}` : `${salonInfoData.name} Location`}
-                  layout="fill"
-                  objectFit="cover"
-                  data-ai-hint={salonInfoData.locationDataAiHint}
-                />
+              <div className="h-80 md:h-96 rounded-lg shadow-xl bg-white">
+                {/* Image removed and background set to white */}
               </div>
             </div>
           </div>
