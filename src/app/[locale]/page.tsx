@@ -16,7 +16,9 @@ import { Percent, Star, MapPin, Ticket, AlertTriangle } from 'lucide-react';
 //   params: { locale: Locale };
 // }
 
-export default async function HomePage({ params: { locale } }: { params: { locale: Locale } }) {
+export default async function HomePage({ params }: { params: { locale: Locale } }) {
+  await Promise.resolve(); // Ensure an async tick before accessing params
+  const locale = params.locale; // Read locale from params early
   // Use the destructured locale directly
   const currentLocale = locale;
 
