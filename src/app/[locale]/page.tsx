@@ -9,7 +9,7 @@ import { ReviewCard } from '@/components/ReviewCard';
 import { salonInfo as getSalonInfo, getMockReviews } from '@/lib/mockData';
 import { fetchPromotionsFromFirestore, getPromotionsVisibilitySetting } from '@/lib/firebase';
 import type { Locale, Promotion, Review } from '@/lib/types';
-import { Percent, Star, MapPin, Ticket, AlertTriangle } from 'lucide-react';
+import { Percent, Star, MapPin, Ticket, AlertTriangle, Instagram, Facebook } from 'lucide-react';
 
 // No longer strictly needed if we destructure params directly in the function signature
 // interface HomePageProps {
@@ -138,13 +138,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
         {fetchError ? (
           <section className="py-16 bg-background">
             <div className="container mx-auto px-6 text-center">
-              <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
-                <div className="flex items-center justify-center mb-2">
-                    <AlertTriangle className="h-6 w-6 me-2" />
-                    <h3 className="font-semibold text-lg">{currentLocale === 'ar' ? 'خطأ في تحميل العروض' : 'Error Loading Promotions'}</h3>
-                </div>
-                <p>{getErrorMessage()}</p>
-              </div>
+              {/* The div for displaying error messages was here and has been removed */}
             </div>
           </section>
         ) : promotionsVisible && promotionsData.length > 0 ? (
@@ -237,13 +231,13 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
               {currentLocale === 'ar' ? 'تابعنا على وسائل التواصل' : 'Connect With Us'}
             </h2>
             <div className="flex justify-center items-center space-x-8 rtl:space-x-reverse">
-              {salonInfoData.socialMedia.map((social) => (
+              {salonInfoData.socialMedia.filter(social => social.icon).map((social) => ( // Filter out if icon is undefined
                 <a
-                  key={social.name[currentLocale] || social.name.en}
+                  key={social.name[currentLocale as 'en' | 'ar'] || social.name.en}
                   href={social.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={social.name[currentLocale] || social.name.en}
+                  aria-label={social.name[currentLocale as 'en' | 'ar'] || social.name.en}
                   className="text-primary hover:text-accent transition-colors duration-300 transform hover:scale-110"
                 >
                   <social.icon className="h-10 w-10 md:h-12 md:w-12" />
@@ -257,4 +251,3 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     </div>
   );
 }
-
