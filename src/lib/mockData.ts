@@ -112,7 +112,7 @@ const salonInfoEn = {
   locationDataAiHint: "salon map location",
   galleryImages: [
     { url: "https://i.postimg.cc/HxdSzdYB/resized-image-400x300-1.jpg", alt: "Salon Interior 1", dataAiHint: "luxury salon interior" },
-    { url: "https://placehold.co/400x300.png", alt: "Salon Interior 2", dataAiHint: "barber station chair" },
+    { url: "https://i.postimg.cc/T3ZkFn97/FB-IMG-1750080535312.jpg", alt: "Salon Interior 2", dataAiHint: "barber station chair" },
     { url: "https://placehold.co/400x300.png", alt: "Happy Customer", dataAiHint: "customer smiling barber" },
   ],
   translations: {
@@ -152,7 +152,7 @@ const salonInfoAr: typeof salonInfoEn = {
   locationDataAiHint: "salon map location",
   galleryImages: [
     { url: "https://i.postimg.cc/HxdSzdYB/resized-image-400x300-1.jpg", alt: "الصالون من الداخل 1", dataAiHint: "luxury salon interior" },
-    { url: "https://placehold.co/400x300.png", alt: "الصالون من الداخل 2", dataAiHint: "barber station chair" },
+    { url: "https://i.postimg.cc/T3ZkFn97/FB-IMG-1750080535312.jpg", alt: "الصالون من الداخل 2", dataAiHint: "barber station chair" },
     { url: "https://placehold.co/400x300.png", alt: "عميل سعيد", dataAiHint: "customer smiling barber" },
   ],
   translations: {
