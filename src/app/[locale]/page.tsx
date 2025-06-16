@@ -88,7 +88,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
         </section>
 
         {/* About Us Section */}
-        <section className="py-8 bg-secondary">
+        <section className="py-12 bg-secondary"> {/* Changed py-8 to py-12 */}
           <div className="container mx-auto px-6 text-center">
             <h2 className="text-4xl font-headline font-bold text-primary mb-6">{t('aboutUs')}</h2>
             <p className="text-lg text-secondary-foreground max-w-3xl mx-auto leading-relaxed">
