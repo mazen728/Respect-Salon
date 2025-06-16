@@ -10,7 +10,7 @@ import { salonInfo as getSalonInfo, getMockPromotions, getMockReviews } from '@/
 import { fetchPromotionsFromFirestore } from '@/lib/firebase';
 import { SeedPromotionsButton } from '@/components/SeedPromotionsButton';
 import type { Locale, Promotion, Review } from '@/lib/types';
-import { Users, Percent, Star, MapPin, Sparkles, Ticket } from 'lucide-react';
+import { Users, Percent, Star, MapPin, Sparkles, Ticket, AlertTriangle } from 'lucide-react';
 
 interface HomePageProps {
   params: { locale: Locale };
@@ -23,29 +23,39 @@ export default async function HomePage({ params }: HomePageProps) {
 
   let promotionsData: Promotion[] = [];
   let fetchError = false;
+  let firebaseErrorType: 'permission' | 'generic' | null = null;
   let usingFirestorePromotions = false;
 
   try {
-    // fetchPromotionsFromFirestore now handles the visibility setting internally
     const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
     if (firestorePromotions.length > 0) {
       promotionsData = firestorePromotions;
       usingFirestorePromotions = true;
     } else {
-      // This case means either Firestore is empty OR promotions are hidden by settings.
-      // The console log inside fetchPromotionsFromFirestore will specify if hidden by settings.
-      console.warn(`No promotions to display for locale: ${currentLocale}. This could be due to empty Firestore collection or admin settings.`);
-      // promotionsData remains empty.
+      console.warn(`[HomePage] No promotions to display for locale: ${currentLocale}. This could be due to empty Firestore collection or admin settings disabling promotions.`);
     }
-  } catch (error) {
-    console.error("Error fetching promotions data, an unexpected error occurred:", error);
-    fetchError = true; // Indicates a failure in the fetch process itself, not just empty data or hidden by settings.
-    // No fallback to mock data here if the intention is to rely on Firestore or settings.
-    // If mock data fallback is desired on true error, it can be reinstated:
-    // promotionsData = getMockPromotions(currentLocale); 
+  } catch (error: any) {
+    console.error("[HomePage] Error fetching promotions data:", error);
+    fetchError = true;
+    if (error.message && (error.message.toLowerCase().includes('permission') || error.message.toLowerCase().includes('denied'))) {
+      firebaseErrorType = 'permission';
+    } else {
+      firebaseErrorType = 'generic';
+    }
   }
   
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
+
+  const getErrorMessage = () => {
+    if (firebaseErrorType === 'permission') {
+      return currentLocale === 'ar' 
+        ? 'حدث خطأ في الأذونات أثناء جلب العروض. يرجى التحقق من قواعد الأمان في Firestore.' 
+        : 'Permission error fetching promotions. Please check Firestore security rules.';
+    }
+    return currentLocale === 'ar' 
+      ? 'حدث خطأ غير متوقع أثناء محاولة جلب العروض. يرجى المحاولة مرة أخرى لاحقًا.' 
+      : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -134,8 +144,24 @@ export default async function HomePage({ params }: HomePageProps) {
         </section>
 
         {/* Promotions Section Logic */}
-        {promotionsData.length > 0 ? (
-          // Case 1: Promotions ARE available (from Firestore and enabled by settings)
+        {fetchError ? (
+          // Case 0: Fetch Error for promotions
+          <section className="py-16 bg-background">
+            <div className="container mx-auto px-6 text-center">
+              <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
+                <div className="flex items-center justify-center mb-2">
+                    <AlertTriangle className="h-6 w-6 me-2" />
+                    <h3 className="font-semibold text-lg">{currentLocale === 'ar' ? 'خطأ في تحميل العروض' : 'Error Loading Promotions'}</h3>
+                </div>
+                <p>{getErrorMessage()}</p>
+              </div>
+              <div className="mt-8">
+                <SeedPromotionsButton locale={currentLocale} />
+              </div>
+            </div>
+          </section>
+        ) : promotionsData.length > 0 ? (
+          // Case 1: Promotions ARE available
           <section id="promotions" className="py-16 bg-background">
             <div className="container mx-auto px-6">
               <div className="text-center mb-12">
@@ -147,13 +173,8 @@ export default async function HomePage({ params }: HomePageProps) {
               </div>
 
               <SeedPromotionsButton locale={currentLocale} />
-
-              {fetchError && ( 
-                <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive text-center">
-                  <p>{currentLocale === 'ar' ? 'حدث خطأ أثناء جلب العروض. يتم عرض البيانات الافتراضية إذا توفرت.' : 'Error fetching promotions. Displaying fallback data if available.'}</p>
-                </div>
-              )}
-              {!fetchError && usingFirestorePromotions && ( 
+              
+              {usingFirestorePromotions && ( 
                 <div className="mb-4 p-3 border rounded-md bg-secondary/20 text-sm text-muted-foreground text-center">
                   {currentLocale === 'ar' ? 'يتم عرض العروض من قاعدة البيانات.' : 'Displaying promotions from Firestore.'}
                 </div>
@@ -167,14 +188,9 @@ export default async function HomePage({ params }: HomePageProps) {
             </div>
           </section>
         ) : (
-          // Case 2: NO Promotions to display (Firestore is empty, OR display disabled by settings, OR fetch error and no fallback)
+          // Case 2: NO Promotions to display (Firestore is empty, OR display disabled by settings)
           <section className="py-16 bg-background">
             <div className="container mx-auto px-6 text-center">
-              {fetchError && ( 
-                <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">
-                  <p>{currentLocale === 'ar' ? 'حدث خطأ أثناء محاولة جلب العروض ولم تتوفر بيانات بديلة. يرجى المحاولة مرة أخرى لاحقًا.' : 'An error occurred while trying to fetch promotions and no fallback data was available. Please try again later.'}</p>
-                </div>
-              )}
               <div className="py-10 bg-card rounded-lg shadow-lg my-8">
                 <Ticket className="h-16 w-16 text-muted-foreground mx-auto mb-6 opacity-75" />
                 <p className="text-2xl font-headline text-primary mb-3">
@@ -189,12 +205,9 @@ export default async function HomePage({ params }: HomePageProps) {
                 <SeedPromotionsButton locale={currentLocale} />
               </div>
               
-              {!fetchError && ( 
-                  <div className="mt-6 p-3 border border-dashed rounded-md bg-secondary/20 text-sm text-muted-foreground">
-                      {currentLocale === 'ar' ? 'لم يتم العثور على عروض في قاعدة البيانات، أو أن عرضها معطل حاليًا بواسطة إعدادات المسؤول. يمكنك محاولة إضافة البيانات الأولية.' : 'No promotions found in the database, or their display is currently disabled by admin settings. You can try seeding initial data.'}
-                  </div>
-                )
-              }
+              <div className="mt-6 p-3 border border-dashed rounded-md bg-secondary/20 text-sm text-muted-foreground">
+                  {currentLocale === 'ar' ? 'لم يتم العثور على عروض في قاعدة البيانات، أو أن عرضها معطل حاليًا بواسطة إعدادات المسؤول. يمكنك محاولة إضافة البيانات الأولية.' : 'No promotions found in the database, or their display is currently disabled by admin settings. You can try seeding initial data.'}
+              </div>
             </div>
           </section>
         )}
@@ -257,3 +270,5 @@ export default async function HomePage({ params }: HomePageProps) {
     </div>
   );
 }
+
+    
