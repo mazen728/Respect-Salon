@@ -8,23 +8,26 @@ import { PromotionCard } from '@/components/PromotionCard';
 import { ReviewCard } from '@/components/ReviewCard';
 import { salonInfo as getSalonInfo, getMockReviews } from '@/lib/mockData';
 import { fetchPromotionsFromFirestore, getPromotionsVisibilitySetting } from '@/lib/firebase';
-import type { Locale, Promotion, Review } from '@/lib/types';
+import type { Locale, Promotion, Review, SalonInfoData } from '@/lib/types';
 import { Percent, Star, MapPin, Ticket, AlertTriangle, Instagram, Facebook } from 'lucide-react';
 
-// No longer strictly needed if we destructure params directly in the function signature
-// interface HomePageProps {
-//   params: { locale: Locale };
-// }
+interface FetchedData {
+  currentLocale: Locale;
+  promotionsVisible: boolean;
+  salonInfoData: SalonInfoData; // Corrected type from mockData export
+  mockReviewsData: Review[];
+  promotionsData: Promotion[];
+  fetchError: boolean;
+  firebaseErrorType: 'permission' | 'generic' | null;
+  usingFirestorePromotions: boolean;
+}
 
-export default async function HomePage({ params }: { params: { locale: Locale } }) {
-  await Promise.resolve(); // Ensure an async tick before accessing params
-  const locale = params.locale; // Read locale from params early
-  // Use the destructured locale directly
-  const currentLocale = locale;
+async function fetchData(pageParams: { locale: Locale }): Promise<FetchedData> {
+  // Ensure an async tick before accessing params properties.
+  await Promise.resolve();
+  const currentLocale = pageParams.locale;
 
-  // Perform the first "real" async operation.
   const promotionsVisible = await getPromotionsVisibilitySetting();
-
   const salonInfoData = getSalonInfo(currentLocale);
   const mockReviewsData = getMockReviews(currentLocale);
 
@@ -34,8 +37,8 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
   let usingFirestorePromotions = false;
 
   if (promotionsVisible) {
-    try {
-      // Pass currentLocale to the fetch function
+    try
+      {
       const firestorePromotions = await fetchPromotionsFromFirestore(currentLocale);
       if (firestorePromotions.length > 0) {
         promotionsData = firestorePromotions;
@@ -50,19 +53,47 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
       }
     }
   }
-  
+
+  return {
+    currentLocale,
+    promotionsVisible,
+    salonInfoData,
+    mockReviewsData,
+    promotionsData,
+    fetchError,
+    firebaseErrorType,
+    usingFirestorePromotions,
+  };
+}
+
+export default async function HomePage({ params }: { params: { locale: Locale } }) {
+  // Initial await can remain, or be removed if all param usage is deferred. Kept for safety.
+  await Promise.resolve();
+
+  const {
+    currentLocale,
+    promotionsVisible,
+    salonInfoData,
+    mockReviewsData,
+    promotionsData,
+    fetchError,
+    firebaseErrorType,
+    // usingFirestorePromotions, // Not directly used in JSX, but available
+  } = await fetchData(params);
+
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
 
-  const getErrorMessage = () => {
-    if (firebaseErrorType === 'permission') {
-      return currentLocale === 'ar' 
-        ? 'حدث خطأ في الأذونات أثناء جلب العروض. يرجى التحقق من قواعد الأمان في Firestore والتأكد من أنها تسمح بالقراءة لمجموعتي `promotions` و `appSettings`.' 
-        : 'Permission error fetching promotions. Please check Firestore security rules and ensure they allow read access for `promotions` and `appSettings` collections.';
-    }
-    return currentLocale === 'ar' 
-      ? 'حدث خطأ غير متوقع أثناء محاولة جلب العروض. يرجى المحاولة مرة أخرى لاحقًا.' 
-      : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
-  };
+  // getErrorMessage is not used in the current JSX structure after removing the error div
+  // const getErrorMessage = () => {
+  //   if (firebaseErrorType === 'permission') {
+  //     return currentLocale === 'ar'
+  //       ? 'حدث خطأ في الأذونات أثناء جلب العروض. يرجى التحقق من قواعد الأمان في Firestore والتأكد من أنها تسمح بالقراءة لمجموعتي `promotions` و `appSettings`.'
+  //       : 'Permission error fetching promotions. Please check Firestore security rules and ensure they allow read access for `promotions` and `appSettings` collections.';
+  //   }
+  //   return currentLocale === 'ar'
+  //     ? 'حدث خطأ غير متوقع أثناء محاولة جلب العروض. يرجى المحاولة مرة أخرى لاحقًا.'
+  //     : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
+  // };
 
   const youtubeVideoId = "AeQH9veCMbw";
   const youtubeEmbedUrl = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youtubeVideoId}&controls=0&modestbranding=1&showinfo=0&fs=0&disablekb=1&iv_load_policy=3`;
@@ -73,7 +104,6 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
       <main className="flex-grow">
         {/* Hero Section */}
         <section className="relative h-[70vh] min-h-[400px] flex items-center justify-center text-center bg-black">
-          {/* Image removed, background set to bg-black */}
           <div className="relative z-10 p-6 bg-black rounded-lg shadow-xl">
             <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary mb-4">
               {salonInfoData.name}
@@ -119,7 +149,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row items-center gap-8">
               <div className="md:w-1/2">
-                {/* Image removed as per user request */}
+                {/* Image removed */}
               </div>
               <div className="md:w-1/2 text-center md:text-start">
                 <h2 className="text-4xl font-headline font-bold text-primary mb-4">{t('ourFeaturedLook')}</h2>
@@ -138,7 +168,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
         {fetchError ? (
           <section className="py-16 bg-background">
             <div className="container mx-auto px-6 text-center">
-              {/* The div for displaying error messages was here and has been removed */}
+              {/* Error display div previously here was removed */}
             </div>
           </section>
         ) : promotionsVisible && promotionsData.length > 0 ? (
@@ -231,7 +261,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
               {currentLocale === 'ar' ? 'تابعنا على وسائل التواصل' : 'Connect With Us'}
             </h2>
             <div className="flex justify-center items-center space-x-8 rtl:space-x-reverse">
-              {salonInfoData.socialMedia.filter(social => social.icon).map((social) => ( // Filter out if icon is undefined
+              {salonInfoData.socialMedia.filter(social => social.icon).map((social) => (
                 <a
                   key={social.name[currentLocale as 'en' | 'ar'] || social.name.en}
                   href={social.url}
@@ -251,3 +281,4 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     </div>
   );
 }
+
