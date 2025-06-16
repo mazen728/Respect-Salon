@@ -65,6 +65,8 @@ export default async function HomePage({ params }: HomePageProps) {
       : 'An unexpected error occurred while trying to fetch promotions. Please try again later.';
   };
 
+  const videoEmbedUrl = "https://drive.google.com/file/d/1s7PUc91aB0FpoJUlIJOjD-OIw83VYtXv/preview";
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">
@@ -102,14 +104,19 @@ export default async function HomePage({ params }: HomePageProps) {
           </div>
         </section>
 
-        {/* Video Section (Replaces Gallery) */}
+        {/* Video Section */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-6">
             <h2 className="text-4xl font-headline font-bold text-primary text-center mb-10">{t('glimpseOfSalon')}</h2>
-            <div className="w-full h-[400px] md:h-[500px] bg-muted rounded-lg shadow-lg flex items-center justify-center text-center p-4">
-              <p className="text-muted-foreground text-lg">
-                {currentLocale === 'ar' ? 'سيتم عرض الفيديو هنا قريباً. يرجى تقديم رابط الفيديو ليتم تضمينه.' : 'A video will be featured here soon. Please provide the video link for embedding.'}
-              </p>
+            <div className="aspect-video w-full max-w-3xl mx-auto bg-muted rounded-lg shadow-lg overflow-hidden">
+              <iframe
+                className="w-full h-full"
+                src={videoEmbedUrl}
+                title={t('glimpseOfSalon')}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
             </div>
           </div>
         </section>
@@ -256,3 +263,4 @@ export default async function HomePage({ params }: HomePageProps) {
     </div>
   );
 }
+
