@@ -95,24 +95,6 @@ export default async function HomePage({ params }: HomePageProps) {
         </div>
       </section>
 
-      {/* Featured Barbers Section */}
-      <section className="container mx-auto">
-        <div className="flex items-center justify-center mb-8 gap-3">
-          <Users className="h-10 w-10 text-accent" />
-          <h2 className="font-headline text-3xl font-semibold text-primary">{t('meetBarbers')}</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {mockBarbersData.map((barber) => (
-            <BarberCard key={barber.id} barber={barber} locale={currentLocale} />
-          ))}
-        </div>
-        <div className="text-center mt-8">
-          <Button variant="outline" asChild>
-            <Link href={`/${currentLocale}/barbers`}>{t('viewAllBarbers')}</Link>
-          </Button>
-        </div>
-      </section>
-
       {/* Current Promotions Section */}
       <section className="container mx-auto">
          <div className="flex items-center justify-center mb-8 gap-3">
