@@ -74,7 +74,7 @@ export default async function HomePage({ params: { locale } }: { params: { local
         {/* Hero Section */}
         <section className="relative h-[70vh] min-h-[400px] flex items-center justify-center text-center bg-black">
           {/* Image removed, background set to bg-black */}
-          <div className="relative z-10 p-6 bg-background/70 backdrop-blur-sm rounded-lg shadow-xl">
+          <div className="relative z-10 p-6 bg-black rounded-lg shadow-xl">
             <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary mb-4">
               {salonInfoData.name}
             </h1>
