@@ -128,7 +128,7 @@ export default async function HomePage({ params }: HomePageProps) {
             <div className="flex flex-col md:flex-row items-center gap-8">
               <div className="md:w-1/2">
                 <Image
-                  src="https://placehold.co/600x400.png"
+                  src="https://i.postimg.cc/mDxr5Ztf/resized-image-2.jpg"
                   alt={t('ourFeaturedLook')}
                   width={600}
                   height={400}
