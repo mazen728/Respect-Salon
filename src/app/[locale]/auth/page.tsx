@@ -45,8 +45,8 @@ const translations = {
     imageUrlDesc: "Link to your profile picture.",
     age: "Age (Optional)",
     agePlaceholder: "e.g., 30",
-    phone: "Phone Number (Optional)",
-    phonePlaceholder: "+1234567890",
+    phone: "Phone Number",
+    phonePlaceholder: "01xxxxxxxxx",
     confirmPassword: "Confirm Password",
     confirmPasswordPlaceholder: "••••••••",
     createAccountButton: "Create Account",
@@ -64,7 +64,9 @@ const translations = {
     nameMax: "Name must be at most 50 characters.",
     ageMin: "Age must be a positive number.",
     ageMax: "Age seems too high.",
-    phoneInvalid: "Invalid phone number format (e.g., +1234567890).",
+    phoneInvalid: "Invalid phone number format (e.g., +1234567890).", // This can be removed or kept for general reference
+    phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
+    phoneRequired: "Phone number is required.",
     configurationNotFound: "Firebase auth configuration not found. Please ensure sign-in methods are enabled in Firebase console.",
   },
   ar: {
@@ -86,8 +88,8 @@ const translations = {
     imageUrlDesc: "رابط لصورة ملفك الشخصي.",
     age: "العمر (اختياري)",
     agePlaceholder: "مثال: 30",
-    phone: "رقم الهاتف (اختياري)",
-    phonePlaceholder: "+1234567890",
+    phone: "رقم الهاتف",
+    phonePlaceholder: "01xxxxxxxxx",
     confirmPassword: "تأكيد كلمة المرور",
     confirmPasswordPlaceholder: "••••••••",
     createAccountButton: "إنشاء حساب",
@@ -105,7 +107,9 @@ const translations = {
     nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
     ageMin: "يجب أن يكون العمر رقمًا موجبًا.",
     ageMax: "العمر يبدو كبيرًا جدًا.",
-    phoneInvalid: "صيغة رقم الهاتف غير صالحة (مثال: +1234567890).",
+    phoneInvalid: "صيغة رقم الهاتف غير صالحة (مثال: +1234567890).", // This can be removed or kept for general reference
+    phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
+    phoneRequired: "رقم الهاتف مطلوب.",
     configurationNotFound: "لم يتم العثور على تكوين المصادقة في Firebase. يرجى التأكد من تفعيل أساليب تسجيل الدخول في لوحة تحكم Firebase.",
   },
 };
@@ -141,7 +145,9 @@ export default function AuthPage() {
       (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
       z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
     ),
-    phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, { message: t.phoneInvalid }).optional().or(z.literal('')),
+    phone: z.string()
+      .min(1, { message: t.phoneRequired }) // Ensure it's not empty
+      .regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
     email: z.string().email({ message: t.invalidEmail }),
     password: z.string().min(6, { message: t.weakPassword }),
     confirmPassword: z.string(),
@@ -195,7 +201,6 @@ export default function AuthPage() {
          description = t.configurationNotFound;
          break;
       default:
-        // For other Firebase errors or general errors
         if (error.message) {
           description = error.message;
         }
@@ -206,7 +211,11 @@ export default function AuthPage() {
   async function onLoginSubmit(values: LoginFormValues) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      await upsertUserData(userCredential.user.uid, { email: userCredential.user.email }); // Only update lastLogin and ensure email exists
+      // Only update lastLogin and ensure email exists on login
+      await upsertUserData(userCredential.user.uid, { 
+        email: userCredential.user.email,
+        // Do not send other profile fields on login to avoid overwriting them
+      });
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
       router.push(`/${locale}/profile`);
     } catch (error) {
@@ -223,8 +232,8 @@ export default function AuthPage() {
         name: values.name,
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
-        phoneNumber: values.phone || null,
-        isAnonymous: false,
+        phoneNumber: values.phone, // Now mandatory
+        isAnonymous: false, // Explicitly false for email/password accounts
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
       router.push(`/${locale}/profile`);
@@ -401,5 +410,4 @@ export default function AuthPage() {
     </div>
   );
 }
-
     
