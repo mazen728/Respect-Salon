@@ -1,6 +1,6 @@
 
 import type { Barber, Service, Appointment, Promotion, Review, UserProfile, Locale, SalonInfoData } from './types';
-import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Palette, Zap, Ticket, LucideIcon, Instagram, Facebook, Twitter } from 'lucide-react';
+import { Scissors, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Palette, Zap, Ticket, LucideIcon, Instagram, Facebook } from 'lucide-react';
 
 
 interface LocalizedString {
@@ -106,7 +106,6 @@ const salonInfoEn = {
   socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_men_salon?igsh=cDJ2dTdxcm5namVu", icon: Instagram },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/15yWNrD3FE/", icon: Facebook },
-    { name: { en: "Twitter", ar: "تويتر" }, url: "https://x.com/", icon: Twitter },
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
@@ -147,7 +146,6 @@ const salonInfoAr: SalonInfoData = {
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_men_salon?igsh=cDJ2dTdxcm5namVu", icon: Instagram },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/15yWNrD3FE/", icon: Facebook },
-    { name: { en: "Twitter", ar: "تويتر" }, url: "https://x.com/", icon: Twitter },
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
