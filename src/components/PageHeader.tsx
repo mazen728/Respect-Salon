@@ -1,22 +1,27 @@
+
 "use client";
 
 import Link from 'next/link';
 import Image from 'next/image'; // Import next/image
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Menu } from 'lucide-react'; // Scissors removed from lucide-react imports
+import { Menu, LogIn, UserPlus } from 'lucide-react'; // Added LogIn and UserPlus
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface NavItem {
   href: string;
   label: { en: string; ar: string };
+  icon?: React.ElementType; // Optional icon
 }
 
 const navItems: NavItem[] = [
   { href: '/', label: { en: 'Home', ar: 'الرئيسية' } },
   { href: '/services', label: { en: 'Services', ar: 'الخدمات' } },
+  { href: '/barbers', label: { en: 'Barbers', ar: 'الحلاقون' } },
   { href: '/appointments', label: { en: 'My Appointments', ar: 'مواعيدي' } },
   { href: '/profile', label: { en: 'Profile', ar: 'الملف الشخصي' } },
+  { href: '/login', label: { en: 'Login', ar: 'تسجيل الدخول' }, icon: LogIn },
+  { href: '/signup', label: { en: 'Sign Up', ar: 'إنشاء حساب' }, icon: UserPlus },
 ];
 
 interface PageHeaderProps {
@@ -35,22 +40,23 @@ export function PageHeader({ locale }: PageHeaderProps) {
           <Image
             src="https://i.postimg.cc/tgyg008Z/FB-IMG-1749942810921.jpg"
             alt={locale === 'ar' ? 'شعار صالون رسبيكت' : 'Respect Salon Logo'}
-            width={32} // h-8 w-8 roughly translates to 32px
-            height={32} // h-8 w-8 roughly translates to 32px
-            className="object-contain" // Ensures the image fits without cropping, maintaining aspect ratio
+            width={32} 
+            height={32} 
+            className="object-contain" 
             data-ai-hint="salon logo icon"
           />
           <span className="font-headline text-2xl font-bold">{salonName}</span>
         </Link>
-        
+
         <div className="flex items-center gap-4">
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             {navItems.map((item) => (
               <Link
                 key={item.label.en}
                 href={`/${locale}${item.href === '/' ? '' : item.href}`}
-                className="transition-colors hover:text-primary"
+                className="transition-colors hover:text-primary flex items-center gap-1"
               >
+                {item.icon && <item.icon className="h-4 w-4" />}
                 {t(item.label)}
               </Link>
             ))}
@@ -71,7 +77,7 @@ export function PageHeader({ locale }: PageHeaderProps) {
                        <Image
                         src="https://i.postimg.cc/tgyg008Z/FB-IMG-1749942810921.jpg"
                         alt={locale === 'ar' ? 'شعار صالون رسبيكت' : 'Respect Salon Logo'}
-                        width={28} // Slightly smaller for mobile menu
+                        width={28} 
                         height={28}
                         className="object-contain"
                         data-ai-hint="salon logo icon"
@@ -83,8 +89,9 @@ export function PageHeader({ locale }: PageHeaderProps) {
                     <SheetClose asChild key={item.label.en}>
                       <Link
                         href={`/${locale}${item.href === '/' ? '' : item.href}`}
-                        className="transition-colors hover:text-primary py-2"
+                        className="transition-colors hover:text-primary py-2 flex items-center gap-2"
                       >
+                        {item.icon && <item.icon className="h-5 w-5" />}
                         {t(item.label)}
                       </Link>
                     </SheetClose>

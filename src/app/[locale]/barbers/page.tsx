@@ -4,7 +4,7 @@ import { getMockBarbers } from '@/lib/mockData';
 import { fetchBarbersFromFirestore } from '@/lib/firebase'; 
 import type { Locale, Barber } from '@/lib/types';
 import { Users, AlertTriangle } from 'lucide-react';
-// SeedDataButton import removed
+
 
 interface BarbersPageProps {
   params: { locale: Locale };
@@ -32,20 +32,20 @@ const translations = {
 };
 
 export default async function BarbersPage({ params }: BarbersPageProps) {
-  await Promise.resolve(); // Ensure an async tick before accessing params
-  const localeParam = params.locale; // Read locale from params early
+  await Promise.resolve(); 
+  const localeParam = params.locale; 
   
   let barbers: Barber[] = [];
   let fetchError = false;
   let usingFirestoreData = false;
-  let currentLocaleForTranslations = localeParam; // Use for translations initially
+  let currentLocaleForTranslations = localeParam; 
   let t = translations[currentLocaleForTranslations] || translations.en;
 
   try {
-    // Main async data fetching using localeParam
+    
     const firestoreBarbers = await fetchBarbersFromFirestore(localeParam);
     
-    // Update currentLocaleForTranslations and t after await if needed (though localeParam should be stable)
+    
     currentLocaleForTranslations = localeParam;
     t = translations[currentLocaleForTranslations] || translations.en;
 
@@ -56,13 +56,13 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
       barbers = getMockBarbers(currentLocaleForTranslations);
     }
   } catch (error) {
-    currentLocaleForTranslations = localeParam; // Ensure locale is set for error messages
+    currentLocaleForTranslations = localeParam; 
     t = translations[currentLocaleForTranslations] || translations.en;
     fetchError = true;
     barbers = getMockBarbers(currentLocaleForTranslations); 
   }
   
-  // Final locale for rendering (should be same as localeParam)
+  
   const currentLocale = localeParam;
 
   return (
@@ -75,7 +75,6 @@ export default async function BarbersPage({ params }: BarbersPageProps) {
         </p>
       </div>
 
-      {/* SeedDataButton component usage removed */}
 
       {fetchError && (
         <div className="mb-8 p-4 border border-destructive/50 rounded-md bg-destructive/10 text-destructive">

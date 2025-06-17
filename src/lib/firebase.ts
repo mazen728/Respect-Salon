@@ -1,10 +1,11 @@
 
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
+import { getAuth } from 'firebase/auth'; // Import getAuth
 import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc, setDoc, getDoc } from 'firebase/firestore';
 import { getAnalytics, isSupported } from "firebase/analytics";
 import type { Barber, Locale, Promotion } from './types';
-import { generateMockBarbers as getOriginalMockBarbers, getRawMockPromotions } from './mockData'; 
+import { generateMockBarbers as getOriginalMockBarbers, getRawMockPromotions } from './mockData';
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -27,6 +28,7 @@ if (!getApps().length) {
 }
 
 const db = getFirestore(app);
+const auth = getAuth(app); // Initialize Firebase Auth
 
 // Initialize Firebase Analytics if supported (runs only in browser)
 let analytics;
@@ -38,19 +40,19 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export { db, analytics };
+export { db, auth, analytics }; // Export auth
 
 // Function to fetch barbers from Firestore
 export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[]> {
   if (!firebaseConfig.projectId) {
     console.warn("Firebase project ID not configured. Firestore fetch skipped for barbers.");
-    return []; 
+    return [];
   }
   try {
     const barbersRef = collection(db, 'barbers');
     const q = query(barbersRef, where('locale', '==', locale));
     const querySnapshot = await getDocs(q);
-    
+
     if (querySnapshot.empty) {
       console.log(`No barbers found in Firestore for locale: ${locale}.`);
       return [];
@@ -66,7 +68,7 @@ export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[
         specialties: Array.isArray(data.specialties) ? data.specialties : [],
         rating: typeof data.rating === 'number' ? data.rating : 0,
         availability: data.availability || '',
-      } as Barber; 
+      } as Barber;
     });
     return barbers;
   } catch (error) {
@@ -77,7 +79,7 @@ export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[
     if (error instanceof Error && (error.message.includes('Failed to get document because the client is offline') || error.message.includes('Could not reach Cloud Firestore backend'))) {
         console.error("Could not reach Cloud Firestore for barbers. Check your internet connection and Firebase configuration.");
     }
-    return []; 
+    return [];
   }
 }
 
@@ -89,7 +91,7 @@ export async function seedBarbersData(): Promise<string> {
   }
   try {
     const barbersRef = collection(db, 'barbers');
-    const existingDataQuery = query(barbersRef, limit(1)); 
+    const existingDataQuery = query(barbersRef, limit(1));
     const existingDataSnapshot = await getDocs(existingDataQuery);
 
     if (!existingDataSnapshot.empty) {
@@ -103,13 +105,13 @@ export async function seedBarbersData(): Promise<string> {
 
     for (const currentLocale of locales) {
       const mockBarbersForLocale: Omit<Barber, 'id'>[] = getOriginalMockBarbers(currentLocale).map(({ id, ...rest }) => ({
-        ...rest, 
-        originalMockId: id, 
-        locale: currentLocale,     
+        ...rest,
+        originalMockId: id,
+        locale: currentLocale,
       }));
-      
+
       mockBarbersForLocale.forEach((barberData) => {
-        const docRef = doc(collection(db, 'barbers')); 
+        const docRef = doc(collection(db, 'barbers'));
         batch.set(docRef, barberData);
         count++;
       });
@@ -134,7 +136,7 @@ export async function seedBarbersData(): Promise<string> {
 export async function getPromotionsVisibilitySetting(): Promise<boolean> {
   if (!firebaseConfig.projectId) {
     console.warn("[Firebase Settings] Firebase project ID not configured. Cannot fetch app settings. Defaulting to false.");
-    return false; 
+    return false;
   }
   try {
     const settingsDocRef = doc(db, 'appSettings', 'main');
@@ -148,7 +150,7 @@ export async function getPromotionsVisibilitySetting(): Promise<boolean> {
     return false;
   } catch (error) {
     console.error("[Firebase Settings] Error fetching promotions visibility setting:", error);
-    return false; 
+    return false;
   }
 }
 
@@ -222,9 +224,9 @@ export async function seedPromotionsData(): Promise<string> {
 
     if (existingDataSnapshot.empty) {
       const batch = writeBatch(db);
-      const rawPromotions = getRawMockPromotions(); 
+      const rawPromotions = getRawMockPromotions();
       rawPromotions.forEach(promoData => {
-        const docRef = doc(promotionsRef, promoData.id); 
+        const docRef = doc(promotionsRef, promoData.id);
         const firestoreData = {
           title_en: promoData.title.en,
           title_ar: promoData.title.ar,
@@ -248,7 +250,7 @@ export async function seedPromotionsData(): Promise<string> {
     const settingsRef = doc(db, 'appSettings', 'main');
     await setDoc(settingsRef, { promotionsVisible: true }, { merge: true });
     console.log('[Firebase Seed] Successfully ensured promotionsVisible is true in appSettings/main.');
-    
+
     return `${promotionsSeededMessage} Promotions display setting is now ON.`;
 
   } catch (error) {
@@ -264,4 +266,3 @@ export async function seedPromotionsData(): Promise<string> {
     return `Error during promotions seeding: ${specificError}`;
   }
 }
-    
