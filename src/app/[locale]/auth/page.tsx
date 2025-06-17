@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, LogIn, UserPlus, Image as ImageIcon, Phone, AtSign, Lock, ShieldCheck, CalendarIcon } from 'lucide-react';
+import { UserCircle, LogIn, UserPlus, Image as ImageIcon, Phone, AtSign, Lock, ShieldCheck, CalendarDays } from 'lucide-react';
 
 const translations = {
   en: {
@@ -136,12 +136,12 @@ export default function AuthPage() {
   // Create Account Form Schema
   const createAccountFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
-    imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')), // URL or empty
+    imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')),
     age: z.preprocess(
       (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
       z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
     ),
-    phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, { message: t.phoneInvalid }).optional().or(z.literal('')), // E.164 format or empty
+    phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, { message: t.phoneInvalid }).optional().or(z.literal('')),
     email: z.string().email({ message: t.invalidEmail }),
     password: z.string().min(6, { message: t.weakPassword }),
     confirmPassword: z.string(),
@@ -172,22 +172,33 @@ export default function AuthPage() {
     switch (error.code) {
       case 'auth/email-already-in-use':
         description = t.emailInUse;
+        createAccountForm.setError("email", { type: "manual", message: t.emailInUse });
         break;
       case 'auth/invalid-email':
         description = t.invalidEmail;
+        loginForm.setError("email", { type: "manual", message: t.invalidEmail });
+        createAccountForm.setError("email", { type: "manual", message: t.invalidEmail });
         break;
       case 'auth/weak-password':
         description = t.weakPassword;
+        createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
         break;
       case 'auth/user-not-found':
         description = t.userNotFound;
+        loginForm.setError("email", { type: "manual", message: t.userNotFound });
         break;
       case 'auth/wrong-password':
         description = t.wrongPassword;
+        loginForm.setError("password", { type: "manual", message: t.wrongPassword });
         break;
       case 'auth/configuration-not-found':
          description = t.configurationNotFound;
          break;
+      default:
+        // For other Firebase errors or general errors
+        if (error.message) {
+          description = error.message;
+        }
     }
     toast({ variant: "destructive", title, description });
   };
@@ -195,8 +206,7 @@ export default function AuthPage() {
   async function onLoginSubmit(values: LoginFormValues) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      // Optionally update lastLoginAt or other info for existing users if needed
-      await upsertUserData(userCredential.user.uid, { email: userCredential.user.email });
+      await upsertUserData(userCredential.user.uid, { email: userCredential.user.email }); // Only update lastLogin and ensure email exists
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
       router.push(`/${locale}/profile`);
     } catch (error) {
@@ -209,12 +219,12 @@ export default function AuthPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
       await upsertUserData(user.uid, {
-        email: user.email, // Email from Firebase Auth user object
+        email: user.email,
         name: values.name,
         imageUrl: values.imageUrl || null,
-        age: values.age ? Number(values.age) : null,
+        age: values.age !== undefined ? Number(values.age) : null,
         phoneNumber: values.phone || null,
-        isAnonymous: false, // This is not an anonymous user
+        isAnonymous: false,
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
       router.push(`/${locale}/profile`);
@@ -319,7 +329,7 @@ export default function AuthPage() {
                     name="age"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center"><CalendarIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
+                        <FormLabel className="flex items-center"><CalendarDays className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
                         <FormControl>
                           <Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} />
                         </FormControl>

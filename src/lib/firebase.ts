@@ -47,7 +47,7 @@ export async function upsertUserData(uid: string, data: {
   name?: string | null;
   imageUrl?: string | null;
   age?: number | null;
-  isAnonymous?: boolean; // Keep this if you plan to support anonymous login elsewhere
+  isAnonymous?: boolean;
 }) {
   if (!firebaseConfig.projectId) {
     console.warn("Firebase project ID not configured. User data operation skipped.");
@@ -60,57 +60,39 @@ export async function upsertUserData(uid: string, data: {
       lastLoginAt: serverTimestamp(),
     };
 
-    // Prepare data to save, only include fields that are provided and not null/undefined
-    const userDataToSave: any = { uid }; // Always include uid
-
-    if (data.email !== undefined) userDataToSave.email = data.email;
-    if (data.phoneNumber !== undefined) userDataToSave.phoneNumber = data.phoneNumber;
-    if (data.name !== undefined) userDataToSave.name = data.name;
-    if (data.imageUrl !== undefined) userDataToSave.imageUrl = data.imageUrl;
-    // Ensure age is explicitly handled: 0 is a valid age, so check for undefined/null
-    if (data.age !== undefined && data.age !== null) {
-        userDataToSave.age = data.age;
-    } else if (data.age === null) { // Explicitly store null if passed
-        userDataToSave.age = null;
-    }
-    // For isAnonymous, only set if explicitly passed
-    if (data.isAnonymous !== undefined) userDataToSave.isAnonymous = data.isAnonymous;
+    // Prepare the payload for Firestore.
+    // For updates, only defined fields in 'data' will be included.
+    // For creates, all relevant fields from 'data' (nulls included, undefineds excluded) will be set.
+    const payload: any = {};
+    if (data.email !== undefined) payload.email = data.email;
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.imageUrl !== undefined) payload.imageUrl = data.imageUrl; // Will be null if passed as null
+    if (data.age !== undefined) payload.age = data.age; // Will be null or a number
+    if (data.phoneNumber !== undefined) payload.phoneNumber = data.phoneNumber; // Will be null if passed as null
+    if (data.isAnonymous !== undefined) payload.isAnonymous = data.isAnonymous;
 
 
     if (docSnap.exists()) {
-      // Merge with existing data, but ensure new data (even if null) overwrites
-      const existingData = docSnap.data();
-      const finalDataForUpdate = { ...existingData, ...userDataToSave, ...commonData };
-
-      // Remove fields that are explicitly set to null from existing data if they are not in userDataToSave
-      // This logic might be too complex and lead to unintentional data removal.
-      // Simpler: just update with what's provided.
-      // If a field is `null` in `userDataToSave`, it will be set to `null` in Firestore.
-      // If a field is `undefined` in `userDataToSave`, it won't be touched by `updateDoc` unless it's a new field.
-      // For new users (setDoc), undefined fields are not written.
-      // For existing users (updateDoc), undefined fields in `userDataToSave` don't change existing values.
-
+      // Update existing document
+      // updateDoc only modifies fields present in the payload.
+      // If a field in payload is null, it updates it to null in Firestore.
+      // If a field from the existing document is not in payload, it's untouched.
       await updateDoc(userRef, {
-        ...userDataToSave, // This will set fields to null if explicitly passed as null
+        ...payload,
         ...commonData,
       });
-      console.log("User data updated in Firestore for UID:", uid, "with data:", userDataToSave);
+      console.log("User data updated in Firestore for UID:", uid, "with data:", payload);
     } else {
-      // For new users, include createdAt
-      // Filter out undefined values before setting, as Firestore doesn't store undefined
-      const finalDataForSet: any = {};
-      for (const key in userDataToSave) {
-        if (userDataToSave[key] !== undefined) {
-          finalDataForSet[key] = userDataToSave[key];
-        }
-      }
-
+      // Create new document
+      // setDoc will write all fields from payload.
+      // uid is also added to the document body for easier querying if needed, though doc ID is the uid.
       await setDoc(userRef, {
-        ...finalDataForSet,
+        ...payload,
+        uid, // Storing uid in the document body as well
         createdAt: serverTimestamp(),
         ...commonData,
       });
-      console.log("New user data created in Firestore for UID:", uid, "with data:", finalDataForSet);
+      console.log("New user data created in Firestore for UID:", uid, "with data:", payload);
     }
   } catch (error) {
     console.error(`Error upserting user data for UID ${uid} in Firestore:`, error);
