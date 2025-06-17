@@ -2,26 +2,26 @@
 "use client";
 
 import Link from 'next/link';
-import Image from 'next/image'; // Import next/image
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Menu, LogIn, UserPlus } from 'lucide-react'; // Added LogIn and UserPlus
+import { Menu, User } from 'lucide-react'; // Changed LogIn, UserPlus to User
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface NavItem {
   href: string;
   label: { en: string; ar: string };
-  icon?: React.ElementType; // Optional icon
+  icon?: React.ElementType; 
 }
 
+// Updated navItems
 const navItems: NavItem[] = [
   { href: '/', label: { en: 'Home', ar: 'الرئيسية' } },
   { href: '/services', label: { en: 'Services', ar: 'الخدمات' } },
   { href: '/barbers', label: { en: 'Barbers', ar: 'الحلاقون' } },
   { href: '/appointments', label: { en: 'My Appointments', ar: 'مواعيدي' } },
   { href: '/profile', label: { en: 'Profile', ar: 'الملف الشخصي' } },
-  { href: '/login', label: { en: 'Login', ar: 'تسجيل الدخول' }, icon: LogIn },
-  { href: '/signup', label: { en: 'Sign Up', ar: 'إنشاء حساب' }, icon: UserPlus },
+  { href: '/auth', label: { en: 'Account', ar: 'الحساب' }, icon: User }, // New combined auth link
 ];
 
 interface PageHeaderProps {
@@ -105,3 +105,5 @@ export function PageHeader({ locale }: PageHeaderProps) {
     </header>
   );
 }
+
+    
