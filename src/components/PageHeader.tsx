@@ -4,14 +4,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
 import { Menu, User } from 'lucide-react'; // Changed LogIn, UserPlus to User
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface NavItem {
   href: string;
   label: { en: string; ar: string };
-  icon?: React.ElementType; 
+  icon?: React.ElementType;
 }
 
 // Updated navItems
@@ -32,6 +32,7 @@ export function PageHeader({ locale }: PageHeaderProps) {
   const t = (label: { en: string; ar: string }) => label[locale as keyof typeof label] || label.en;
   const salonName = locale === 'ar' ? 'صالون رسبيكت' : 'Respect Salon';
   const toggleSrText = locale === 'ar' ? 'تبديل قائمة التنقل' : 'Toggle navigation menu';
+  const sheetTitleText = locale === 'ar' ? 'القائمة' : 'Menu';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -40,9 +41,9 @@ export function PageHeader({ locale }: PageHeaderProps) {
           <Image
             src="https://i.postimg.cc/tgyg008Z/FB-IMG-1749942810921.jpg"
             alt={locale === 'ar' ? 'شعار صالون رسبيكت' : 'Respect Salon Logo'}
-            width={32} 
-            height={32} 
-            className="object-contain" 
+            width={32}
+            height={32}
+            className="object-contain"
             data-ai-hint="salon logo icon"
           />
           <span className="font-headline text-2xl font-bold">{salonName}</span>
@@ -71,18 +72,21 @@ export function PageHeader({ locale }: PageHeaderProps) {
                 </Button>
               </SheetTrigger>
               <SheetContent side={locale === 'ar' ? 'left' : 'right'} className="w-[280px] sm:w-[320px]">
-                <nav className="grid gap-6 text-lg font-medium mt-8">
+                <SheetHeader className="border-b pb-3 mb-3 text-start"> {/* Added text-start for LTR/RTL consistency */}
+                  <SheetTitle className="font-headline text-xl">{sheetTitleText}</SheetTitle>
+                </SheetHeader>
+                <nav className="grid gap-4 text-lg font-medium">
                   <SheetClose asChild>
-                    <Link href={`/${locale}`} className="flex items-center gap-2 text-primary mb-4">
+                    <Link href={`/${locale}`} className="flex items-center gap-2 text-primary mb-2">
                        <Image
                         src="https://i.postimg.cc/tgyg008Z/FB-IMG-1749942810921.jpg"
                         alt={locale === 'ar' ? 'شعار صالون رسبيكت' : 'Respect Salon Logo'}
-                        width={28} 
-                        height={28}
+                        width={24} // Slightly smaller to fit better with title
+                        height={24}
                         className="object-contain"
                         data-ai-hint="salon logo icon"
                       />
-                      <span className="font-headline text-xl font-bold">{salonName}</span>
+                      <span className="font-headline text-lg font-bold">{salonName}</span>
                     </Link>
                   </SheetClose>
                   {navItems.map((item) => (
@@ -105,5 +109,3 @@ export function PageHeader({ locale }: PageHeaderProps) {
     </header>
   );
 }
-
-    
