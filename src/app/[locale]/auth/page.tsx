@@ -64,7 +64,8 @@ const translations = {
     nameMax: "Name must be at most 50 characters.",
     ageMin: "Age must be a positive number.",
     ageMax: "Age seems too high.",
-    phoneInvalid: "Invalid phone number format.",
+    phoneInvalid: "Invalid phone number format (e.g., +1234567890).",
+    configurationNotFound: "Firebase auth configuration not found. Please ensure sign-in methods are enabled in Firebase console.",
   },
   ar: {
     pageTitle: "الوصول إلى الحساب",
@@ -104,7 +105,8 @@ const translations = {
     nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
     ageMin: "يجب أن يكون العمر رقمًا موجبًا.",
     ageMax: "العمر يبدو كبيرًا جدًا.",
-    phoneInvalid: "صيغة رقم الهاتف غير صالحة.",
+    phoneInvalid: "صيغة رقم الهاتف غير صالحة (مثال: +1234567890).",
+    configurationNotFound: "لم يتم العثور على تكوين المصادقة في Firebase. يرجى التأكد من تفعيل أساليب تسجيل الدخول في لوحة تحكم Firebase.",
   },
 };
 
@@ -122,7 +124,7 @@ export default function AuthPage() {
   // Login Form Schema
   const loginFormSchema = z.object({
     email: z.string().email({ message: t.invalidEmail }),
-    password: z.string().min(1, { message: t.passwordPlaceholder }), // Basic check, Firebase handles complexity
+    password: z.string().min(1, { message: t.passwordPlaceholder }),
   });
   type LoginFormValues = z.infer<typeof loginFormSchema>;
 
@@ -134,9 +136,12 @@ export default function AuthPage() {
   // Create Account Form Schema
   const createAccountFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
-    imageUrl: z.string().url({ message: t.imageUrlPlaceholder }).optional().or(z.literal('')),
-    age: z.coerce.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional().or(z.literal(0)).or(z.literal('')),
-    phone: z.string().optional().or(z.literal('')), // Add more specific phone validation if needed e.g. .regex(/^\+[1-9]\d{1,14}$/
+    imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')), // URL or empty
+    age: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+      z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
+    ),
+    phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, { message: t.phoneInvalid }).optional().or(z.literal('')), // E.164 format or empty
     email: z.string().email({ message: t.invalidEmail }),
     password: z.string().min(6, { message: t.weakPassword }),
     confirmPassword: z.string(),
@@ -181,7 +186,7 @@ export default function AuthPage() {
         description = t.wrongPassword;
         break;
       case 'auth/configuration-not-found':
-         description = "Firebase auth configuration not found. Please ensure sign-in methods are enabled in Firebase console.";
+         description = t.configurationNotFound;
          break;
     }
     toast({ variant: "destructive", title, description });
@@ -190,6 +195,7 @@ export default function AuthPage() {
   async function onLoginSubmit(values: LoginFormValues) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      // Optionally update lastLoginAt or other info for existing users if needed
       await upsertUserData(userCredential.user.uid, { email: userCredential.user.email });
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
       router.push(`/${locale}/profile`);
@@ -203,12 +209,12 @@ export default function AuthPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
       await upsertUserData(user.uid, {
-        email: user.email,
+        email: user.email, // Email from Firebase Auth user object
         name: values.name,
         imageUrl: values.imageUrl || null,
         age: values.age ? Number(values.age) : null,
         phoneNumber: values.phone || null,
-        isAnonymous: false,
+        isAnonymous: false, // This is not an anonymous user
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
       router.push(`/${locale}/profile`);
@@ -224,7 +230,7 @@ export default function AuthPage() {
       <h1 className="text-3xl font-bold mb-2 text-center font-headline">{t.pageTitle}</h1>
       <p className="text-muted-foreground mb-8 text-center max-w-md">{t.pageDescription}</p>
 
-      <Tabs defaultValue="login" className="w-full max-w-md">
+      <Tabs defaultValue="create-account" className="w-full max-w-md">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="login"><LogIn className="me-2 h-4 w-4" />{t.loginTab}</TabsTrigger>
           <TabsTrigger value="create-account"><UserPlus className="me-2 h-4 w-4" />{t.createAccountTab}</TabsTrigger>
@@ -315,7 +321,7 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel className="flex items-center"><CalendarIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(+event.target.value)} />
+                          <Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -386,3 +392,4 @@ export default function AuthPage() {
   );
 }
 
+    
