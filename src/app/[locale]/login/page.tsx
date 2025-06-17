@@ -34,7 +34,8 @@ const translations = {
     loginErrorTitle: "Login Failed",
     invalidEmail: "Invalid email address.",
     passwordRequired: "Password is required.",
-    anErrorOccurred: "An error occurred. Please try again."
+    anErrorOccurred: "An error occurred. Please try again.",
+    invalidCredentials: "Invalid email or password." // New translation
   },
   ar: {
     pageTitle: "عودة ملكية",
@@ -50,7 +51,8 @@ const translations = {
     loginErrorTitle: "فشل تسجيل الدخول",
     invalidEmail: "بريد إلكتروني غير صالح.",
     passwordRequired: "كلمة المرور مطلوبة.",
-    anErrorOccurred: "حدث خطأ. يرجى المحاولة مرة أخرى."
+    anErrorOccurred: "حدث خطأ. يرجى المحاولة مرة أخرى.",
+    invalidCredentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة." // New translation
   }
 };
 
@@ -95,9 +97,12 @@ export default function LoginPage() {
     } catch (error: any) {
       let errorMessage = t.anErrorOccurred;
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        errorMessage = "Invalid email or password.";
+        errorMessage = t.invalidCredentials;
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = t.invalidEmail;
+      } else {
+        // Append the actual Firebase error message for unhandled cases
+        errorMessage = `${t.anErrorOccurred} (${error.message || error.code || 'Unknown Firebase error'})`;
       }
       toast({
         variant: "destructive",

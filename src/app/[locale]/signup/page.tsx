@@ -115,6 +115,9 @@ export default function SignUpPage() {
         errorMessage = t.invalidEmail;
       } else if (error.code === 'auth/weak-password') {
         errorMessage = t.passwordMinLength;
+      } else {
+        // Append the actual Firebase error message for unhandled cases
+        errorMessage = `${t.anErrorOccurred} (${error.message || error.code || 'Unknown Firebase error'})`;
       }
       toast({
         variant: "destructive",
