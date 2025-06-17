@@ -120,7 +120,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
             <h2 className="text-4xl font-headline font-bold text-primary text-center mb-10">{t('glimpseOfSalon')}</h2>
             <div className="aspect-video w-full max-w-3xl mx-auto bg-muted rounded-lg shadow-lg overflow-hidden">
                <iframe
-                className="w-full h-full"
+                className="w-full h-full pointer-events-none"
                 src={youtubeEmbedUrl}
                 title={t('glimpseOfSalon')}
                 allow="autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -262,3 +262,4 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     </div>
   );
 }
+
