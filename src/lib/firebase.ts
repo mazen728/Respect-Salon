@@ -27,7 +27,7 @@ if (!getApps().length) {
 }
 
 const db = getFirestore(app);
-const auth = getAuth(app); 
+const auth = getAuth(app);
 
 let analytics;
 if (typeof window !== 'undefined') {
@@ -41,7 +41,14 @@ if (typeof window !== 'undefined') {
 export { db, auth, analytics };
 
 // Function to upsert user data in Firestore
-export async function upsertUserData(uid: string, data: { email?: string; phoneNumber?: string; isAnonymous?: boolean }) {
+export async function upsertUserData(uid: string, data: {
+  email?: string | null;
+  phoneNumber?: string | null;
+  name?: string | null;
+  imageUrl?: string | null;
+  age?: number | null;
+  isAnonymous?: boolean;
+}) {
   if (!firebaseConfig.projectId) {
     console.warn("Firebase project ID not configured. User data operation skipped.");
     throw new Error("Firestore not configured for user data.");
@@ -52,9 +59,15 @@ export async function upsertUserData(uid: string, data: { email?: string; phoneN
     const commonData = {
       lastLoginAt: serverTimestamp(),
     };
-    const userDataToSave: any = { ...data }; // Use 'any' for flexibility with isAnonymous
-    if (data.email === undefined) delete userDataToSave.email;
-    if (data.phoneNumber === undefined) delete userDataToSave.phoneNumber;
+
+    // Prepare data to save, only include fields that are provided and not null/undefined
+    const userDataToSave: any = {};
+    if (data.email) userDataToSave.email = data.email;
+    if (data.phoneNumber) userDataToSave.phoneNumber = data.phoneNumber;
+    if (data.name) userDataToSave.name = data.name;
+    if (data.imageUrl) userDataToSave.imageUrl = data.imageUrl;
+    if (data.age !== undefined && data.age !== null) userDataToSave.age = data.age;
+    if (data.isAnonymous !== undefined) userDataToSave.isAnonymous = data.isAnonymous;
 
 
     if (docSnap.exists()) {
@@ -68,6 +81,7 @@ export async function upsertUserData(uid: string, data: { email?: string; phoneN
         ...userDataToSave,
         createdAt: serverTimestamp(),
         ...commonData,
+        uid: uid, // Also store uid in the document
       });
       console.log("New user data created in Firestore for UID:", uid);
     }
@@ -220,7 +234,7 @@ export async function fetchPromotionsFromFirestore(locale: Locale): Promise<Prom
 
     const promotions: Promotion[] = querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
-      if (querySnapshot.docs.indexOf(docSnapshot) === 0) { 
+      if (querySnapshot.docs.indexOf(docSnapshot) === 0) {
           console.log("[Firebase Fetch] Data of first promotion document:", JSON.stringify(data, null, 2));
       }
       return {
@@ -302,5 +316,4 @@ export async function seedPromotionsData(): Promise<string> {
     return `Error during promotions seeding: ${specificError}`;
   }
 }
-
     
