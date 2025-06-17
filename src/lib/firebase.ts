@@ -1,14 +1,13 @@
 
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
-import { getAuth } from 'firebase/auth'; // Import getAuth
-import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { getAnalytics, isSupported } from "firebase/analytics";
 import type { Barber, Locale, Promotion } from './types';
 import { generateMockBarbers as getOriginalMockBarbers, getRawMockPromotions } from './mockData';
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig: FirebaseOptions = {
   apiKey: "AIzaSyCPGb7DJyT6q6Ij2xRFv-If8cFnr-eRf3w",
   authDomain: "respect-salon1.firebaseapp.com",
@@ -28,9 +27,8 @@ if (!getApps().length) {
 }
 
 const db = getFirestore(app);
-const auth = getAuth(app); // Initialize Firebase Auth
+const auth = getAuth(app); 
 
-// Initialize Firebase Analytics if supported (runs only in browser)
 let analytics;
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
@@ -40,7 +38,48 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export { db, auth, analytics }; // Export auth
+export { db, auth, analytics };
+
+// Function to upsert user data in Firestore
+export async function upsertUserData(uid: string, data: { email?: string; phoneNumber?: string; isAnonymous?: boolean }) {
+  if (!firebaseConfig.projectId) {
+    console.warn("Firebase project ID not configured. User data operation skipped.");
+    throw new Error("Firestore not configured for user data.");
+  }
+  const userRef = doc(db, 'users', uid);
+  try {
+    const docSnap = await getDoc(userRef);
+    const commonData = {
+      lastLoginAt: serverTimestamp(),
+    };
+    const userDataToSave: any = { ...data }; // Use 'any' for flexibility with isAnonymous
+    if (data.email === undefined) delete userDataToSave.email;
+    if (data.phoneNumber === undefined) delete userDataToSave.phoneNumber;
+
+
+    if (docSnap.exists()) {
+      await updateDoc(userRef, {
+        ...userDataToSave,
+        ...commonData,
+      });
+      console.log("User data updated in Firestore for UID:", uid);
+    } else {
+      await setDoc(userRef, {
+        ...userDataToSave,
+        createdAt: serverTimestamp(),
+        ...commonData,
+      });
+      console.log("New user data created in Firestore for UID:", uid);
+    }
+  } catch (error) {
+    console.error(`Error upserting user data for UID ${uid} in Firestore:`, error);
+    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+        console.error("Firestore Security Rules might be denying access for 'users' collection.");
+    }
+    throw new Error(`Firestore: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+  }
+}
+
 
 // Function to fetch barbers from Firestore
 export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[]> {
@@ -162,7 +201,6 @@ export async function fetchPromotionsFromFirestore(locale: Locale): Promise<Prom
   }
 
   const promotionsAreVisible = await getPromotionsVisibilitySetting();
-  // The log for promotionsAreVisible value is now inside getPromotionsVisibilitySetting
 
   if (!promotionsAreVisible) {
     console.warn("[Firebase Fetch] Promotions display is DISABLED by admin settings (promotionsVisible=false or not found). Returning empty list for promotions.");
@@ -182,8 +220,7 @@ export async function fetchPromotionsFromFirestore(locale: Locale): Promise<Prom
 
     const promotions: Promotion[] = querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
-      // Log the data for one document to check its structure
-      if (querySnapshot.docs.indexOf(docSnapshot) === 0) { // Log only the first document's data for brevity
+      if (querySnapshot.docs.indexOf(docSnapshot) === 0) { 
           console.log("[Firebase Fetch] Data of first promotion document:", JSON.stringify(data, null, 2));
       }
       return {
@@ -246,7 +283,6 @@ export async function seedPromotionsData(): Promise<string> {
       console.log('[Firebase Seed] Promotions data likely already exists in Firestore. Seeding skipped to avoid duplication.');
     }
 
-    // Ensure promotions visibility is enabled
     const settingsRef = doc(db, 'appSettings', 'main');
     await setDoc(settingsRef, { promotionsVisible: true }, { merge: true });
     console.log('[Firebase Seed] Successfully ensured promotionsVisible is true in appSettings/main.');
@@ -266,3 +302,5 @@ export async function seedPromotionsData(): Promise<string> {
     return `Error during promotions seeding: ${specificError}`;
   }
 }
+
+    
