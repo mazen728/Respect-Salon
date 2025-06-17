@@ -64,10 +64,11 @@ const translations = {
     nameMax: "Name must be at most 50 characters.",
     ageMin: "Age must be a positive number.",
     ageMax: "Age seems too high.",
-    phoneInvalid: "Invalid phone number format (e.g., +1234567890).",
     phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
     phoneRequired: "Phone number is required.",
     configurationNotFound: "Firebase auth configuration not found. Please ensure sign-in methods are enabled in Firebase console.",
+    firestoreError: "Database Error",
+    firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem.",
   },
   ar: {
     pageTitle: "الوصول إلى الحساب",
@@ -107,10 +108,11 @@ const translations = {
     nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
     ageMin: "يجب أن يكون العمر رقمًا موجبًا.",
     ageMax: "العمر يبدو كبيرًا جدًا.",
-    phoneInvalid: "صيغة رقم الهاتف غير صالحة (مثال: +1234567890).",
     phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
     phoneRequired: "رقم الهاتف مطلوب.",
     configurationNotFound: "لم يتم العثور على تكوين المصادقة في Firebase. يرجى التأكد من تفعيل أساليب تسجيل الدخول في لوحة تحكم Firebase.",
+    firestoreError: "خطأ في قاعدة البيانات",
+    firestorePermissionsError: "تعذر حفظ معلومات ملفك الشخصي بسبب مشكلات في أذونات قاعدة البيانات. هذه مشكلة في إعدادات الخادم.",
   },
 };
 
@@ -168,54 +170,65 @@ export default function AuthPage() {
     },
   });
 
-
-  const handleAuthError = (error: AuthError) => {
-    console.error("Firebase Auth Error:", error.code, error.message);
+  const handleAuthError = (error: AuthError | Error) => {
+    console.error("Auth or Firestore Error:", error);
     let title = t.authError;
     let description = t.genericError;
-    switch (error.code) {
-      case 'auth/email-already-in-use':
-        description = t.emailInUse;
-        createAccountForm.setError("email", { type: "manual", message: t.emailInUse });
-        break;
-      case 'auth/invalid-email':
-        description = t.invalidEmail;
-        loginForm.setError("email", { type: "manual", message: t.invalidEmail });
-        createAccountForm.setError("email", { type: "manual", message: t.invalidEmail });
-        break;
-      case 'auth/weak-password':
-        description = t.weakPassword;
-        createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
-        break;
-      case 'auth/user-not-found':
-        description = t.userNotFound;
-        loginForm.setError("email", { type: "manual", message: t.userNotFound });
-        break;
-      case 'auth/wrong-password':
-        description = t.wrongPassword;
-        loginForm.setError("password", { type: "manual", message: t.wrongPassword });
-        break;
-      case 'auth/configuration-not-found':
-         description = t.configurationNotFound;
-         break;
-      default:
-        if (error.message) {
-          description = error.message;
-        }
+
+    if ('code' in error && typeof (error as any).code === 'string') { // It's likely an AuthError
+      const authError = error as AuthError;
+      title = t.authError; // Default title for Auth errors
+      switch (authError.code) {
+        case 'auth/email-already-in-use':
+          description = t.emailInUse;
+          createAccountForm.setError("email", { type: "manual", message: t.emailInUse });
+          break;
+        case 'auth/invalid-email':
+          description = t.invalidEmail;
+          loginForm.setError("email", { type: "manual", message: t.invalidEmail });
+          createAccountForm.setError("email", { type: "manual", message: t.invalidEmail });
+          break;
+        case 'auth/weak-password':
+          description = t.weakPassword;
+          createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
+          break;
+        case 'auth/user-not-found':
+          description = t.userNotFound;
+          loginForm.setError("email", { type: "manual", message: t.userNotFound });
+          break;
+        case 'auth/wrong-password':
+          description = t.wrongPassword;
+          loginForm.setError("password", { type: "manual", message: t.wrongPassword });
+          break;
+        case 'auth/configuration-not-found':
+           description = t.configurationNotFound;
+           break;
+        default:
+          if (authError.message) {
+            description = authError.message;
+          }
+      }
+    } else if (error.message.includes('Firestore: Missing or insufficient permissions')) {
+      title = t.firestoreError;
+      description = t.firestorePermissionsError;
+    } else if (error.message) { // Generic error message
+        description = error.message;
     }
+
     toast({ variant: "destructive", title, description });
   };
 
   async function onLoginSubmit(values: LoginFormValues) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      // Optionally, update lastLoginAt or other minimal data
       await upsertUserData(userCredential.user.uid, { 
-        email: userCredential.user.email,
+        email: userCredential.user.email, // Pass email to ensure it's stored if not already
       });
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
       router.push(`/${locale}/profile`);
     } catch (error) {
-      handleAuthError(error as AuthError);
+      handleAuthError(error as AuthError | Error);
     }
   }
 
@@ -229,15 +242,14 @@ export default function AuthPage() {
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
         phoneNumber: values.phone,
-        isAnonymous: false,
+        isAnonymous: false, 
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
       router.push(`/${locale}/profile`);
     } catch (error) {
-      handleAuthError(error as AuthError);
+      handleAuthError(error as AuthError | Error);
     }
   }
-
 
   return (
     <div className="container mx-auto py-12 px-4 flex flex-col items-center">
