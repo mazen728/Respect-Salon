@@ -239,7 +239,7 @@ export default function AuthPage() {
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
-      router.push(\`/\${locale}/profile\`);
+      router.push(`/${locale}/profile`);
     } catch (error: any) {
       console.error("Login error:", error);
       let errorMessage = t.genericError;
@@ -259,7 +259,7 @@ export default function AuthPage() {
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: t.signupSuccess, description: t.signupSuccessDesc });
-      router.push(\`/\${locale}/profile\`);
+      router.push(`/${locale}/profile`);
     } catch (error: any) {
       console.error("Signup error:", error);
       let errorMessage = t.genericError;
@@ -316,7 +316,7 @@ export default function AuthPage() {
     try {
       await confirmationResult.confirm(values.otp);
       toast({ title: t.signupSuccess, description: t.signupSuccessDesc });
-      router.push(\`/\${locale}/profile\`);
+      router.push(`/${locale}/profile`);
     } catch (error: any) {
       console.error("OTP verification error:", error);
       let errorMessage = t.genericError;
@@ -507,5 +507,3 @@ export default function AuthPage() {
   );
 }
 
-
-    
