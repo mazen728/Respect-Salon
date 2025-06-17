@@ -1,6 +1,6 @@
 
-import type { Barber, Service, Appointment, Promotion, Review, UserProfile, Locale } from './types';
-import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Palette, Zap, Ticket, LucideIcon, Instagram, Facebook } from 'lucide-react';
+import type { Barber, Service, Appointment, Promotion, Review, UserProfile, Locale, SalonInfoData } from './types';
+import { Scissors, User, Users, CalendarDays, Star, Percent, MapPin, Clock, Phone, MessageSquare, Briefcase, Tag, Wand2, Wind, Smile, Baby, Coffee, Palette, Zap, Ticket, LucideIcon, Instagram, Facebook, Twitter } from 'lucide-react';
 
 
 interface LocalizedString {
@@ -106,6 +106,7 @@ const salonInfoEn = {
   socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_men_salon?igsh=cDJ2dTdxcm5namVu", icon: Instagram },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/15yWNrD3FE/", icon: Facebook },
+    { name: { en: "Twitter", ar: "تويتر" }, url: "https://x.com/", icon: Twitter },
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
@@ -136,15 +137,17 @@ const salonInfoEn = {
   }
 };
 
-const salonInfoAr: typeof salonInfoEn = {
+const salonInfoAr: SalonInfoData = {
   name: "صالون رسبيكت",
   address: "191 ش عبد السلام عارف - لوران",
   workingHours: "يومياً: 1:00 ظهراً - 1:00 صباحاً",
   phone: "035836388",
+  email: salonInfoEn.email, // Assuming email is not localized or is the same
   whatsappLink: "https://api.whatsapp.com/send/?phone=201203412006&text&type=phone_number&app_absent=0&wame_ctl=1",
    socialMedia: [
     { name: { en: "Instagram", ar: "انستجرام" }, url: "https://www.instagram.com/respect_men_salon?igsh=cDJ2dTdxcm5namVu", icon: Instagram },
     { name: { en: "Facebook", ar: "فيسبوك" }, url: "https://www.facebook.com/share/15yWNrD3FE/", icon: Facebook },
+    { name: { en: "Twitter", ar: "تويتر" }, url: "https://x.com/", icon: Twitter },
   ],
   locationImage: "https://placehold.co/800x400.png",
   locationDataAiHint: "salon map location",
@@ -175,11 +178,25 @@ const salonInfoAr: typeof salonInfoEn = {
   }
 };
 
-export const salonInfo = (locale: Locale) => locale === 'ar' ? salonInfoAr : salonInfoEn;
+export const salonInfo = (locale: Locale): SalonInfoData => {
+  if (locale === 'ar') {
+    // Ensure salonInfoAr is fully populated and consistent with SalonInfoData type
+    const arData: SalonInfoData = {
+      ...salonInfoAr,
+      // Explicitly map fields that might be missing or need default from English version
+      email: salonInfoEn.email, // Example: if email is not meant to be localized
+      // Ensure all fields from SalonInfoData are present
+    };
+    return arData;
+  }
+  return salonInfoEn;
+};
 
 
 export const mockServices = getMockServices('en'); // Fallback or default locale for non-localized parts
 export const mockPromotions = getMockPromotions('en'); // Fallback or default
 export const mockReviews = getMockReviews('en'); // Fallback or default
 export const mockUserProfile = getMockUserProfile('en'); // Fallback or default
+    
+
     
