@@ -193,8 +193,21 @@ export default function AuthPage() {
   }, [isClient, auth]); // Removed toast, t from dependencies as they are stable
 
 
-  if (!locale || (locale !== 'en' && locale !== 'ar')) {
-    return <div>Loading page...</div>;
+  if (!isClient || !locale || (locale !== 'en' && locale !== 'ar')) {
+    // Fallback for server-side rendering or invalid locale before client hydration
+    const staticTranslations = translations.en; // Default to English for static parts
+    return (
+        <div className="container mx-auto py-12 px-4 flex justify-center items-center min-h-[calc(100vh-15rem)]">
+        <Card className="w-full max-w-md shadow-xl">
+            <CardHeader className="text-center">
+            <UserCircle className="h-12 w-12 text-accent mx-auto mb-4" />
+            <CardTitle className="font-headline text-3xl text-primary">{staticTranslations.pageTitle}</CardTitle>
+            <CardDescription>{staticTranslations.loading}</CardDescription>
+            </CardHeader>
+            <CardContent><div className="h-48 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></CardContent>
+        </Card>
+        </div>
+    );
   }
   const t = translations[locale];
 
@@ -224,7 +237,7 @@ export default function AuthPage() {
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
-      router.push(`/${locale}/profile`);
+      router.push(\`/\${locale}/profile\`);
     } catch (error: any) {
       console.error("Login error:", error);
       let errorMessage = t.genericError;
@@ -242,7 +255,7 @@ export default function AuthPage() {
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
       toast({ title: t.signupSuccess, description: t.signupSuccessDesc });
-      router.push(`/${locale}/profile`);
+      router.push(\`/\${locale}/profile\`);
     } catch (error: any) {
       console.error("Signup error:", error);
       let errorMessage = t.genericError;
@@ -291,7 +304,7 @@ export default function AuthPage() {
     try {
       await confirmationResult.confirm(values.otp);
       toast({ title: t.signupSuccess, description: t.signupSuccessDesc });
-      router.push(`/${locale}/profile`);
+      router.push(\`/\${locale}/profile\`);
     } catch (error: any) {
       console.error("OTP verification error:", error);
       toast({ variant: "destructive", title: t.otpVerificationFailed, description: error.message || t.genericError });
@@ -300,21 +313,6 @@ export default function AuthPage() {
     }
   };
   
-  if (!isClient) {
-    return (
-      <div className="container mx-auto py-12 px-4 flex justify-center items-center min-h-[calc(100vh-15rem)]">
-        <Card className="w-full max-w-md shadow-xl">
-          <CardHeader className="text-center">
-            <UserCircle className="h-12 w-12 text-accent mx-auto mb-4" />
-            <CardTitle className="font-headline text-3xl text-primary">{t.pageTitle}</CardTitle>
-            <CardDescription>{t.loading}</CardDescription>
-          </CardHeader>
-           <CardContent><div className="h-48 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto py-12 px-4 flex justify-center items-center min-h-[calc(100vh-15rem)]">
       <Card className="w-full max-w-md shadow-xl">
