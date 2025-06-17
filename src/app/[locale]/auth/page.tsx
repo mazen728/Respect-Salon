@@ -82,6 +82,7 @@ const translations = {
     recaptchaError: "reCAPTCHA verification failed. Please try again.",
     loading: "Loading...",
     processing: "Processing...",
+    configurationNotFoundError: "Authentication method not configured. Please contact support or check Firebase console settings.",
   },
   ar: {
     pageTitle: "الوصول إلى حسابك",
@@ -122,6 +123,7 @@ const translations = {
     recaptchaError: "فشل التحقق من reCAPTCHA. يرجى المحاولة مرة أخرى.",
     loading: "جار التحميل...",
     processing: "جاري المعالجة...",
+    configurationNotFoundError: "طريقة المصادقة غير مهيأة. يرجى الاتصال بالدعم أو التحقق من إعدادات Firebase console.",
   }
 };
 
@@ -165,7 +167,7 @@ export default function AuthPage() {
   }, []);
   
   useEffect(() => {
-    if (isClient && recaptchaContainerRef.current && !recaptchaVerifier && auth) {
+    if (isClient && recaptchaContainerRef.current && !recaptchaVerifier && auth && phoneStep === 'enterPhone') {
       try {
         const verifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
           'size': 'invisible',
@@ -190,7 +192,7 @@ export default function AuthPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, auth]); // Removed toast, t from dependencies as they are stable
+  }, [isClient, auth, phoneStep]); // Added phoneStep to re-init if user switches back to phone tab
 
 
   if (!isClient || !locale || (locale !== 'en' && locale !== 'ar')) {
@@ -243,6 +245,8 @@ export default function AuthPage() {
       let errorMessage = t.genericError;
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = t.invalidCredentialsError;
+      } else if (error.code === 'auth/configuration-not-found') {
+        errorMessage = t.configurationNotFoundError;
       }
       toast({ variant: "destructive", title: "Login Failed", description: errorMessage });
     } finally {
@@ -263,6 +267,8 @@ export default function AuthPage() {
         errorMessage = t.emailInUseError;
       } else if (error.code === 'auth/weak-password') {
         errorMessage = t.weakPasswordError;
+      } else if (error.code === 'auth/configuration-not-found') {
+        errorMessage = t.configurationNotFoundError;
       }
       toast({ variant: "destructive", title: "Sign Up Failed", description: errorMessage });
     } finally {
@@ -284,7 +290,13 @@ export default function AuthPage() {
       toast({ title: t.otpSent });
     } catch (error: any) {
       console.error("OTP send error:", error);
-      toast({ variant: "destructive", title: t.otpError, description: error.message || t.genericError });
+      let errorMessage = t.genericError;
+      if (error.code === 'auth/configuration-not-found') {
+        errorMessage = t.configurationNotFoundError;
+      } else {
+        errorMessage = error.message || t.genericError;
+      }
+      toast({ variant: "destructive", title: t.otpError, description: errorMessage });
        // Reset reCAPTCHA if necessary
        if (window.grecaptcha && recaptchaVerifier) {
         //  window.grecaptcha.reset(recaptchaVerifier.id); // This might not be the correct way if using invisible
@@ -307,7 +319,15 @@ export default function AuthPage() {
       router.push(\`/\${locale}/profile\`);
     } catch (error: any) {
       console.error("OTP verification error:", error);
-      toast({ variant: "destructive", title: t.otpVerificationFailed, description: error.message || t.genericError });
+      let errorMessage = t.genericError;
+      if (error.code === 'auth/invalid-verification-code') {
+        errorMessage = t.otpVerificationFailed;
+      } else if (error.code === 'auth/configuration-not-found') {
+         errorMessage = t.configurationNotFoundError;
+      } else {
+        errorMessage = error.message || t.genericError;
+      }
+      toast({ variant: "destructive", title: t.otpVerificationFailed, description: errorMessage });
     } finally {
       setIsLoading(false);
     }
@@ -448,6 +468,7 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
+                    <div ref={recaptchaContainerRef} id="recaptcha-container-signup-phone"></div>
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Phone className="me-2 h-4 w-4" />}
                       {isLoading ? t.processing : t.sendOtpButton}
@@ -474,11 +495,10 @@ export default function AuthPage() {
                       {isLoading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="me-2 h-4 w-4" />}
                       {isLoading ? t.processing : t.verifyOtpButton}
                     </Button>
-                     <Button variant="link" onClick={() => setPhoneStep('enterPhone')} className="w-full">{locale === 'ar' ? 'إعادة إرسال الرمز أو تغيير الرقم' : 'Resend code or change number'}</Button>
+                     <Button variant="link" onClick={() => { setPhoneStep('enterPhone'); if(recaptchaVerifier) recaptchaVerifier.clear(); setRecaptchaVerifier(null); }} className="w-full" disabled={isLoading}>{locale === 'ar' ? 'إعادة إرسال الرمز أو تغيير الرقم' : 'Resend code or change number'}</Button>
                   </form>
                 </Form>
               )}
-              <div ref={recaptchaContainerRef} id="recaptcha-container" className="mt-4"></div>
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -487,3 +507,5 @@ export default function AuthPage() {
   );
 }
 
+
+    
