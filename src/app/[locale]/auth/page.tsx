@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { auth, upsertUserData } from '@/lib/firebase';
+import { auth, upsertUserData, findUserByPhoneNumber, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError, onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 
@@ -23,8 +23,20 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, UserPlus, LogIn, Image as ImageIcon, Phone, Lock, ShieldCheck, CalendarDays } from 'lucide-react';
-import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { UserCircle, UserPlus, LogIn, Image as ImageIcon, Phone, Lock, ShieldCheck, CalendarDays, MailQuestion } from 'lucide-react';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 const translations = {
   en: {
@@ -73,6 +85,14 @@ const translations = {
     firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem. Please check your Firestore security rules.",
     checkingAuth: "Checking authentication status...",
     alreadyLoggedIn: "You are already logged in. Redirecting to profile...",
+    forgotPasswordLink: "Forgot password?",
+    forgotPasswordTitle: "Reset Password",
+    forgotPasswordDescription: "Enter your phone number to initiate the password reset process.",
+    sendResetInstructions: "Send Reset Instructions",
+    passwordResetInitiated: "Password Reset Initiated",
+    passwordResetInitiatedDesc: "A password reset process has been started for the account linked to this phone number. Since sign-up uses a phone number without a directly accessible email, you won't receive an email with a reset link. Please contact support if you need further assistance to regain access.",
+    phoneNotFoundForReset: "Phone number not found. Please ensure you entered the correct number or create an account.",
+    passwordResetError: "Password Reset Error",
   },
   ar: {
     pageTitle: "الوصول إلى الحساب",
@@ -120,6 +140,14 @@ const translations = {
     firestorePermissionsError: "تعذر حفظ معلومات ملفك الشخصي بسبب مشكلات في أذونات قاعدة البيانات. هذه مشكلة في إعدادات الخادم. يرجى التحقق من قواعد الأمان في Firestore.",
     checkingAuth: "جارٍ التحقق من حالة المصادقة...",
     alreadyLoggedIn: "أنت مسجل الدخول بالفعل. يتم توجيهك إلى الملف الشخصي...",
+    forgotPasswordLink: "هل نسيت كلمة المرور؟",
+    forgotPasswordTitle: "إعادة تعيين كلمة المرور",
+    forgotPasswordDescription: "أدخل رقم هاتفك لبدء عملية إعادة تعيين كلمة المرور.",
+    sendResetInstructions: "إرسال تعليمات إعادة التعيين",
+    passwordResetInitiated: "بدء عملية إعادة تعيين كلمة المرور",
+    passwordResetInitiatedDesc: "بدأت عملية إعادة تعيين كلمة المرور للحساب المرتبط برقم الهاتف هذا. بما أن التسجيل يستخدم رقم هاتف بدون بريد إلكتروني يمكن الوصول إليه مباشرة، فلن تتلقى بريدًا إلكترونيًا يحتوي على رابط لإعادة التعيين. يرجى الاتصال بالدعم إذا كنت بحاجة إلى مزيد من المساعدة لاستعادة الوصول.",
+    phoneNotFoundForReset: "رقم الهاتف غير موجود. يرجى التأكد من إدخال الرقم الصحيح أو إنشاء حساب.",
+    passwordResetError: "خطأ في إعادة تعيين كلمة المرور",
   },
 };
 
@@ -135,6 +163,8 @@ export default function AuthPage() {
   const locale = params.locale as Locale;
   const { toast } = useToast();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isForgotPasswordAlertOpen, setIsForgotPasswordAlertOpen] = useState(false);
+
 
   const t = translations[locale] || translations.en;
 
@@ -171,10 +201,16 @@ export default function AuthPage() {
   type CreateAccountFormValues = z.infer<typeof createAccountFormSchema>;
 
   const loginFormSchema = z.object({
-    phone: z.string().min(1, {message: t.phoneRequired}),
+    phone: z.string().min(1, {message: t.phoneRequired}).regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
     password: z.string().min(1, { message: t.passwordPlaceholder }),
   });
   type LoginFormValues = z.infer<typeof loginFormSchema>;
+
+  const forgotPasswordFormSchema = z.object({
+    phone: z.string().min(1, { message: t.phoneRequired }).regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
+  });
+  type ForgotPasswordFormValues = z.infer<typeof forgotPasswordFormSchema>;
+
 
   const createAccountForm = useForm<CreateAccountFormValues>({
     resolver: zodResolver(createAccountFormSchema),
@@ -196,29 +232,42 @@ export default function AuthPage() {
     },
   });
 
-  const handleAuthError = (error: AuthError | Error, formType: 'create' | 'login') => {
-    console.error(`${formType} Error:`, error);
-    let title = formType === 'create' ? t.authError : t.loginError;
+  const forgotPasswordForm = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordFormSchema),
+    defaultValues: {
+      phone: "",
+    },
+  });
+
+  const handleAuthError = (error: AuthError | Error, context: 'create' | 'login' | 'reset') => {
+    console.error(`${context} Error:`, error);
+    let title = t.genericError;
     let description = t.genericError;
+
+    if (context === 'create') title = t.authError;
+    if (context === 'login') title = t.loginError;
+    if (context === 'reset') title = t.passwordResetError;
+
 
     if ('code' in error && typeof (error as AuthError).code === 'string') {
       const authError = error as AuthError;
       switch (authError.code) {
-        case 'auth/email-already-in-use':
+        case 'auth/email-already-in-use': // For create account, means phone (via dummy email) is in use
           description = t.phoneInUseError;
-          if (formType === 'create') createAccountForm.setError("phone", { type: "manual", message: description });
+          if (context === 'create') createAccountForm.setError("phone", { type: "manual", message: description });
           break;
         case 'auth/weak-password':
           description = t.weakPassword;
-          if (formType === 'create') createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
+          if (context === 'create') createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
           break;
-        case 'auth/user-not-found':
+        case 'auth/user-not-found': // For login or reset
           description = t.userNotFound;
-          if (formType === 'login') loginForm.setError("phone", { type: "manual", message: t.userNotFound });
+          if (context === 'login') loginForm.setError("phone", { type: "manual", message: t.userNotFound });
+          if (context === 'reset') forgotPasswordForm.setError("phone", { type: "manual", message: t.userNotFound });
           break;
         case 'auth/wrong-password':
           description = t.wrongPassword;
-          if (formType === 'login') loginForm.setError("password", { type: "manual", message: t.wrongPassword });
+          if (context === 'login') loginForm.setError("password", { type: "manual", message: t.wrongPassword });
           break;
         case 'auth/configuration-not-found':
            description = t.configurationNotFound;
@@ -252,6 +301,7 @@ export default function AuthPage() {
         isAnonymous: false,
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
+      // router.push(`/${locale}/profile`); // Already handled by onAuthStateChanged
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'create');
     }
@@ -261,12 +311,40 @@ export default function AuthPage() {
     try {
       const dummyEmail = generateDummyEmailFromPhone(values.phone);
       const userCredential = await signInWithEmailAndPassword(auth, dummyEmail, values.password);
-      await upsertUserData(userCredential.user.uid, { email: dummyEmail, phoneNumber: values.phone });
+      await upsertUserData(userCredential.user.uid, { email: dummyEmail, phoneNumber: values.phone }); // Update lastLogin, ensure phone is there
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
+      // router.push(`/${locale}/profile`); // Already handled by onAuthStateChanged
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'login');
     }
   }
+
+  async function onForgotPasswordSubmit(values: ForgotPasswordFormValues) {
+    try {
+      const userRecord = await findUserByPhoneNumber(values.phone);
+      if (userRecord && userRecord.email) {
+        await firebaseSendPasswordResetEmail(auth, userRecord.email); // Use auth from this file
+        toast({
+          title: t.passwordResetInitiated,
+          description: t.passwordResetInitiatedDesc,
+          duration: 10000, // Longer duration for important message
+        });
+        setIsForgotPasswordAlertOpen(false);
+        forgotPasswordForm.reset();
+      } else {
+        forgotPasswordForm.setError("phone", { type: "manual", message: t.phoneNotFoundForReset });
+        // Toast is handled by setError or general error handler
+      }
+    } catch (error) {
+      // Check if the error is specifically user-not-found for the email
+      if (error instanceof Error && (error as AuthError).code === 'auth/user-not-found') {
+         forgotPasswordForm.setError("phone", { type: "manual", message: t.phoneNotFoundForReset });
+      } else {
+        handleAuthError(error as AuthError | Error, 'reset');
+      }
+    }
+  }
+
 
   if (!locale || (locale !== 'en' && locale !== 'ar')) {
     return <div className="flex justify-center items-center min-h-screen"><LoadingSpinner size={48} /></div>;
@@ -437,6 +515,47 @@ export default function AuthPage() {
                   </Button>
                 </form>
               </Form>
+              <div className="mt-6 text-center">
+                <AlertDialog open={isForgotPasswordAlertOpen} onOpenChange={setIsForgotPasswordAlertOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="link" className="text-sm text-primary hover:text-primary/80 p-0 h-auto">
+                      <MailQuestion className="me-1 h-4 w-4" /> {t.forgotPasswordLink}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="font-headline">{t.forgotPasswordTitle}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t.forgotPasswordDescription}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <Form {...forgotPasswordForm}>
+                      <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4 py-2">
+                        <FormField
+                          control={forgotPasswordForm.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phone}</FormLabel>
+                              <FormControl>
+                                <Input type="tel" placeholder={t.phonePlaceholder} {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                         <AlertDialogFooter className="pt-2">
+                           <AlertDialogCancel type="button" onClick={() => { setIsForgotPasswordAlertOpen(false); forgotPasswordForm.reset(); }}>{locale === 'ar' ? 'إلغاء' : 'Cancel'}</AlertDialogCancel>
+                           <AlertDialogAction type="submit" disabled={forgotPasswordForm.formState.isSubmitting}>
+                             {forgotPasswordForm.formState.isSubmitting ? <LoadingSpinner className="me-2" /> : null}
+                             {t.sendResetInstructions}
+                           </AlertDialogAction>
+                         </AlertDialogFooter>
+                      </form>
+                    </Form>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -444,6 +563,3 @@ export default function AuthPage() {
     </div>
   );
 }
-
-
-    

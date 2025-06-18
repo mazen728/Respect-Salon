@@ -1,10 +1,10 @@
 
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from 'firebase/auth'; // Import sendPasswordResetEmail
 import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { getAnalytics, isSupported } from "firebase/analytics";
-import type { Barber, Locale, Promotion } from './types';
+import type { Barber, Locale, Promotion, UserProfileData } from './types';
 import { generateMockBarbers as getOriginalMockBarbers, getRawMockPromotions } from './mockData';
 
 // Your web app's Firebase configuration
@@ -41,14 +41,7 @@ if (typeof window !== 'undefined') {
 export { db, auth, analytics };
 
 // Function to upsert user data in Firestore
-export async function upsertUserData(uid: string, data: {
-  email?: string | null;
-  phoneNumber?: string | null;
-  name?: string | null;
-  imageUrl?: string | null;
-  age?: number | null;
-  isAnonymous?: boolean;
-}) {
+export async function upsertUserData(uid: string, data: Partial<UserProfileData> & { email?: string | null, isAnonymous?: boolean, phoneNumber?: string | null }) {
   if (!firebaseConfig.projectId) {
     console.warn("Firebase project ID not configured. User data operation skipped.");
     throw new Error("Firestore not configured for user data.");
@@ -78,9 +71,9 @@ export async function upsertUserData(uid: string, data: {
       console.log("User data updated in Firestore for UID:", uid);
     } else {
       await setDoc(userRef, {
-        uid, // Storing uid in the document body as well
+        uid,
         createdAt: serverTimestamp(),
-        ...payload, // email, name, imageUrl, age, phoneNumber, isAnonymous if provided
+        ...payload,
         ...commonData,
       });
       console.log("New user data created in Firestore for UID:", uid);
@@ -315,4 +308,34 @@ export async function seedPromotionsData(): Promise<string> {
     return `Error during promotions seeding: ${specificError}`;
   }
 }
-    
+
+// Function to find user by phone number (primarily to get their dummy email for password reset)
+export async function findUserByPhoneNumber(phoneNumber: string): Promise<{ uid: string, email: string | null } | null> {
+  if (!firebaseConfig.projectId) {
+    console.warn("Firebase project ID not configured. Cannot search for user by phone number.");
+    return null;
+  }
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("phoneNumber", "==", phoneNumber), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      console.log(`No user found with phone number: ${phoneNumber}`);
+      return null;
+    }
+    const userDoc = querySnapshot.docs[0];
+    const userData = userDoc.data();
+    return {
+      uid: userDoc.id,
+      email: userData.email || null, // email is the dummy email
+    };
+  } catch (error) {
+    console.error(`Error finding user by phone number ${phoneNumber}:`, error);
+    return null;
+  }
+}
+
+export async function sendPasswordResetEmail(email: string): Promise<void> {
+    return firebaseSendPasswordResetEmail(auth, email);
+}

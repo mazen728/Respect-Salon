@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 
 export type Locale = 'en' | 'ar';
@@ -56,18 +57,18 @@ export interface Review {
   dataAiHint?: string;
 }
 
-export interface UserProfile {
-  name: string; // Localized
-  phone: string;
-  email: string;
-  address?: string; // Localized
-  notifications: {
-    appointments: boolean;
-    promotions: boolean;
-    serviceUpdates: boolean;
-  };
-  savedPaymentMethods: Array<{ id: string; type: string; last4: string; expiry: string }>;
+export interface UserProfileData {
+  uid?: string; 
+  name: string | null;
+  email: string | null; // This will store the dummy email
+  imageUrl: string | null;
+  age: number | null;
+  phoneNumber: string | null; // This stores the actual phone number
+  createdAt?: any; // Firestore ServerTimestamp
+  lastLoginAt?: any; // Firestore ServerTimestamp
+  isAnonymous?: boolean;
 }
+
 
 export interface SalonInfoTranslations {
   home: string;
@@ -95,7 +96,7 @@ export interface SalonInfoData {
   address: string;
   workingHours: string;
   phone: string;
-  email: string;
+  email: string; // Main salon contact email, not user email
   whatsappLink: string;
   socialMedia: Array<{ name: LocalizedString; url: string; icon: LucideIcon }>;
   locationImage: string;
@@ -103,3 +104,4 @@ export interface SalonInfoData {
   galleryImages: Array<{ url: string; alt: string; dataAiHint?: string }>;
   translations: SalonInfoTranslations;
 }
+
