@@ -7,7 +7,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { auth, upsertUserData } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError, onAuthStateChanged } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +74,8 @@ const translations = {
     configurationNotFound: "Firebase auth configuration not found. Please ensure sign-in methods are enabled in Firebase console.",
     firestoreError: "Database Error",
     firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem. Please check your Firestore security rules.",
+    checkingAuth: "Checking authentication status...",
+    alreadyLoggedIn: "You are already logged in. Redirecting to profile...",
   },
   ar: {
     pageTitle: "الوصول إلى الحساب",
@@ -120,6 +124,8 @@ const translations = {
     configurationNotFound: "لم يتم العثور على تكوين المصادقة في Firebase. يرجى التأكد من تفعيل أساليب تسجيل الدخول في لوحة تحكم Firebase.",
     firestoreError: "خطأ في قاعدة البيانات",
     firestorePermissionsError: "تعذر حفظ معلومات ملفك الشخصي بسبب مشكلات في أذونات قاعدة البيانات. هذه مشكلة في إعدادات الخادم. يرجى التحقق من قواعد الأمان في Firestore.",
+    checkingAuth: "جارٍ التحقق من حالة المصادقة...",
+    alreadyLoggedIn: "أنت مسجل الدخول بالفعل. يتم توجيهك إلى الملف الشخصي...",
   },
 };
 
@@ -128,11 +134,25 @@ export default function AuthPage() {
   const params = useParams();
   const locale = params.locale as Locale;
   const { toast } = useToast();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  if (!locale || (locale !== 'en' && locale !== 'ar')) {
-    return <div>Loading page translations...</div>;
-  }
-  const t = translations[locale];
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in, redirect them to profile page.
+        toast({ title: t.alreadyLoggedIn });
+        router.push(`/${locale}/profile`);
+      } else {
+        // User is signed out.
+        setIsCheckingAuth(false);
+      }
+    });
+    return () => unsubscribe(); // Cleanup subscription
+  }, [router, locale, toast]);
+
+
+  const t = translations[locale] || translations.en; // Ensure t is initialized after locale check or with fallback
 
   const createAccountFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
@@ -142,7 +162,7 @@ export default function AuthPage() {
       z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
     ),
     phone: z.string()
-      .min(1, { message: t.phoneRequired }) 
+      .min(1, { message: t.phoneRequired })
       .regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
     email: z.string().email({ message: t.invalidEmail }),
     password: z.string().min(6, { message: t.weakPassword }),
@@ -155,7 +175,7 @@ export default function AuthPage() {
 
   const loginFormSchema = z.object({
     email: z.string().email({ message: t.invalidEmail }),
-    password: z.string().min(1, { message: t.passwordPlaceholder }), // Min 1 char for password during login
+    password: z.string().min(1, { message: t.passwordPlaceholder }),
   });
   type LoginFormValues = z.infer<typeof loginFormSchema>;
 
@@ -185,7 +205,7 @@ export default function AuthPage() {
     let title = formType === 'create' ? t.authError : t.loginError;
     let description = t.genericError;
 
-    if ('code' in error && typeof (error as AuthError).code === 'string') { 
+    if ('code' in error && typeof (error as AuthError).code === 'string') {
       const authError = error as AuthError;
       switch (authError.code) {
         case 'auth/email-already-in-use':
@@ -220,14 +240,17 @@ export default function AuthPage() {
     } else if (error.message && (error.message.includes('Firestore: Missing or insufficient permissions') || error.message.includes('permission-denied'))) {
       title = t.firestoreError;
       description = t.firestorePermissionsError;
-    } else if (error.message) { 
+    } else if (error.message) {
         description = error.message;
     }
 
     toast({ variant: "destructive", title, description });
+    if (formType === 'create') createAccountForm.formState.isSubmitting = false;
+    if (formType === 'login') loginForm.formState.isSubmitting = false;
   };
 
   async function onCreateAccountSubmit(values: CreateAccountFormValues) {
+    createAccountForm.formState.isSubmitting = true;
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
@@ -237,27 +260,53 @@ export default function AuthPage() {
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
         phoneNumber: values.phone,
-        isAnonymous: false, 
+        isAnonymous: false,
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
-      router.push(`/${locale}/profile`);
+      // Redirection is handled by onAuthStateChanged
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'create');
+    } finally {
+        // Ensure isSubmitting is reset even if redirect happens before this line.
+        // This might not be strictly necessary if onAuthStateChanged handles redirection immediately
+        // but it's safer.
+        if (createAccountForm) {
+             createAccountForm.formState.isSubmitting = false;
+        }
     }
   }
 
   async function onLoginSubmit(values: LoginFormValues) {
+    loginForm.formState.isSubmitting = true;
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
-      // Update last login time, or create user data if somehow missing (e.g., imported users)
-      await upsertUserData(user.uid, { email: user.email });
+      await upsertUserData(user.uid, { email: user.email }); // Only update lastLogin & email if needed
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
-      router.push(`/${locale}/profile`);
+      // Redirection is handled by onAuthStateChanged
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'login');
+    } finally {
+        if (loginForm) {
+            loginForm.formState.isSubmitting = false;
+        }
     }
   }
+
+  if (!locale || (locale !== 'en' && locale !== 'ar')) {
+    return <div className="flex justify-center items-center min-h-screen"><LoadingSpinner size={48} /></div>;
+  }
+
+
+  if (isCheckingAuth) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen">
+        <LoadingSpinner size={48} />
+        <p className="mt-4 text-muted-foreground">{t.checkingAuth}</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="container mx-auto py-12 px-4 flex flex-col items-center">
@@ -433,3 +482,4 @@ export default function AuthPage() {
     </div>
   );
 }
+
