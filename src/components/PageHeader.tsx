@@ -5,9 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Menu, UserPlus, Home, ListChecks, Users, CalendarDays, UserCircle as ProfileIcon } from 'lucide-react'; // Explicitly alias UserCircle
+import { Menu, UserCircle, Home, ListChecks, Users, CalendarDays, UserPlus } from 'lucide-react';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import type { Locale } from '@/lib/types'; // Import Locale type
+import type { Locale } from '@/lib/types'; 
 
 interface NavItem {
   href: string;
@@ -20,12 +20,12 @@ const navItems: NavItem[] = [
   { href: '/services', label: { en: 'Services', ar: 'الخدمات' }, icon: ListChecks },
   { href: '/barbers', label: { en: 'Barbers', ar: 'الحلاقون' }, icon: Users },
   { href: '/appointments', label: { en: 'My Appointments', ar: 'مواعيدي' }, icon: CalendarDays },
-  { href: '/profile', label: { en: 'Profile', ar: 'الملف الشخصي' }, icon: ProfileIcon }, // Use aliased ProfileIcon
-  { href: '/auth', label: { en: 'Create Account', ar: 'إنشاء حساب' }, icon: UserPlus },
+  { href: '/profile', label: { en: 'Profile', ar: 'الملف الشخصي' }, icon: UserCircle },
+  { href: '/auth', label: { en: 'Login / Register', ar: 'تسجيل / حساب' }, icon: UserCircle },
 ];
 
 interface PageHeaderProps {
-  locale: Locale; // Use Locale type
+  locale: Locale;
 }
 
 export function PageHeader({ locale }: PageHeaderProps) {
@@ -109,5 +109,3 @@ export function PageHeader({ locale }: PageHeaderProps) {
     </header>
   );
 }
-
-    

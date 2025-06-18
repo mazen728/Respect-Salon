@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { auth, upsertUserData } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, type AuthError } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError } from 'firebase/auth';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,14 +19,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, UserPlus, Image as ImageIcon, Phone, AtSign, Lock, ShieldCheck, CalendarDays } from 'lucide-react';
+import { UserCircle, UserPlus, LogIn, Image as ImageIcon, Phone, AtSign, Lock, ShieldCheck, CalendarDays } from 'lucide-react';
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 const translations = {
   en: {
-    pageTitle: "Create Your Account",
-    pageDescription: "Join us by creating a new account to manage your appointments and preferences.",
+    pageTitle: "Account Access",
+    pageDescription: "Create a new account or log in to manage your appointments and preferences.",
+    createAccountTab: "Create Account",
+    loginTab: "Login",
     createAccountCardTitle: "Enter Your Details",
+    loginCardTitle: "Welcome Back",
+    loginCardDescription: "Enter your credentials to access your account.",
     email: "Email Address",
     emailPlaceholder: "name@example.com",
     password: "Password",
@@ -43,14 +49,20 @@ const translations = {
     confirmPassword: "Confirm Password",
     confirmPasswordPlaceholder: "••••••••",
     createAccountButton: "Create Account",
+    loginButton: "Login",
     createAccountSuccess: "Account Created Successfully",
     createAccountSuccessDesc: "Your account is ready. Redirecting you to your profile...",
+    loginSuccess: "Logged In Successfully",
+    loginSuccessDesc: "Welcome back! Redirecting you...",
     passwordsDontMatch: "Passwords do not match.",
     genericError: "An unexpected error occurred. Please try again.",
     authError: "Authentication Error",
-    emailInUse: "This email is already in use. Please use a different email.",
+    loginError: "Login Error",
+    emailInUse: "This email is already in use. Please use a different email or log in.",
     weakPassword: "Password is too weak. It should be at least 6 characters.",
     invalidEmail: "Invalid email address format.",
+    userNotFound: "No user found with this email. Please check your email or create an account.",
+    wrongPassword: "Incorrect password. Please try again.",
     nameMin: "Name must be at least 2 characters.",
     nameMax: "Name must be at most 50 characters.",
     ageMin: "Age must be a positive number.",
@@ -62,9 +74,13 @@ const translations = {
     firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem. Please check your Firestore security rules.",
   },
   ar: {
-    pageTitle: "أنشئ حسابك",
-    pageDescription: "انضم إلينا عن طريق إنشاء حساب جديد لإدارة مواعيدك وتفضيلاتك.",
+    pageTitle: "الوصول إلى الحساب",
+    pageDescription: "أنشئ حسابًا جديدًا أو سجل الدخول لإدارة مواعيدك وتفضيلاتك.",
+    createAccountTab: "إنشاء حساب",
+    loginTab: "تسجيل الدخول",
     createAccountCardTitle: "أدخل بياناتك",
+    loginCardTitle: "أهلاً بعودتك",
+    loginCardDescription: "أدخل بيانات اعتمادك للوصول إلى حسابك.",
     email: "البريد الإلكتروني",
     emailPlaceholder: "name@example.com",
     password: "كلمة المرور",
@@ -81,14 +97,20 @@ const translations = {
     confirmPassword: "تأكيد كلمة المرور",
     confirmPasswordPlaceholder: "••••••••",
     createAccountButton: "إنشاء حساب",
+    loginButton: "تسجيل الدخول",
     createAccountSuccess: "تم إنشاء الحساب بنجاح",
     createAccountSuccessDesc: "حسابك جاهز. يتم توجيهك إلى ملفك الشخصي...",
+    loginSuccess: "تم تسجيل الدخول بنجاح",
+    loginSuccessDesc: "أهلاً بعودتك! يتم توجيهك...",
     passwordsDontMatch: "كلمتا المرور غير متطابقتين.",
     genericError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
     authError: "خطأ في المصادقة",
-    emailInUse: "هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر.",
+    loginError: "خطأ في تسجيل الدخول",
+    emailInUse: "هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر أو تسجيل الدخول.",
     weakPassword: "كلمة المرور ضعيفة جداً. يجب أن تتكون من 6 أحرف على الأقل.",
     invalidEmail: "صيغة البريد الإلكتروني غير صالحة.",
+    userNotFound: "لم يتم العثور على مستخدم بهذا البريد الإلكتروني. يرجى التحقق من بريدك الإلكتروني أو إنشاء حساب.",
+    wrongPassword: "كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
     nameMin: "يجب أن يتكون الاسم من حرفين على الأقل.",
     nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
     ageMin: "يجب أن يكون العمر رقمًا موجبًا.",
@@ -131,6 +153,12 @@ export default function AuthPage() {
   });
   type CreateAccountFormValues = z.infer<typeof createAccountFormSchema>;
 
+  const loginFormSchema = z.object({
+    email: z.string().email({ message: t.invalidEmail }),
+    password: z.string().min(1, { message: t.passwordPlaceholder }), // Min 1 char for password during login
+  });
+  type LoginFormValues = z.infer<typeof loginFormSchema>;
+
   const createAccountForm = useForm<CreateAccountFormValues>({
     resolver: zodResolver(createAccountFormSchema),
     defaultValues: {
@@ -144,26 +172,42 @@ export default function AuthPage() {
     },
   });
 
-  const handleAuthError = (error: AuthError | Error) => {
-    console.error("Auth or Firestore Error:", error);
-    let title = t.authError;
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const handleAuthError = (error: AuthError | Error, formType: 'create' | 'login') => {
+    console.error(`${formType} Error:`, error);
+    let title = formType === 'create' ? t.authError : t.loginError;
     let description = t.genericError;
 
     if ('code' in error && typeof (error as AuthError).code === 'string') { 
       const authError = error as AuthError;
-      title = t.authError; 
       switch (authError.code) {
         case 'auth/email-already-in-use':
           description = t.emailInUse;
-          createAccountForm.setError("email", { type: "manual", message: t.emailInUse });
+          if (formType === 'create') createAccountForm.setError("email", { type: "manual", message: t.emailInUse });
           break;
         case 'auth/invalid-email':
           description = t.invalidEmail;
-          createAccountForm.setError("email", { type: "manual", message: t.invalidEmail });
+          if (formType === 'create') createAccountForm.setError("email", { type: "manual", message: t.invalidEmail });
+          if (formType === 'login') loginForm.setError("email", { type: "manual", message: t.invalidEmail });
           break;
         case 'auth/weak-password':
           description = t.weakPassword;
-          createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
+          if (formType === 'create') createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
+          break;
+        case 'auth/user-not-found':
+          description = t.userNotFound;
+          if (formType === 'login') loginForm.setError("email", { type: "manual", message: t.userNotFound });
+          break;
+        case 'auth/wrong-password':
+          description = t.wrongPassword;
+          if (formType === 'login') loginForm.setError("password", { type: "manual", message: t.wrongPassword });
           break;
         case 'auth/configuration-not-found':
            description = t.configurationNotFound;
@@ -196,134 +240,196 @@ export default function AuthPage() {
         isAnonymous: false, 
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
-      router.push(`/${locale}/profile`); // Redirect to profile page
+      router.push(`/${locale}/profile`);
     } catch (error) {
-      handleAuthError(error as AuthError | Error);
+      handleAuthError(error as AuthError | Error, 'create');
+    }
+  }
+
+  async function onLoginSubmit(values: LoginFormValues) {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+      // Update last login time, or create user data if somehow missing (e.g., imported users)
+      await upsertUserData(user.uid, { email: user.email });
+      toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
+      router.push(`/${locale}/profile`);
+    } catch (error) {
+      handleAuthError(error as AuthError | Error, 'login');
     }
   }
 
   return (
     <div className="container mx-auto py-12 px-4 flex flex-col items-center">
-      <UserPlus className="h-16 w-16 text-primary mb-6" />
+      <UserCircle className="h-16 w-16 text-primary mb-6" />
       <h1 className="text-3xl font-bold mb-2 text-center font-headline">{t.pageTitle}</h1>
       <p className="text-muted-foreground mb-8 text-center max-w-md">{t.pageDescription}</p>
 
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="font-headline">{t.createAccountCardTitle}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...createAccountForm}>
-            <form onSubmit={createAccountForm.handleSubmit(onCreateAccountSubmit)} className="space-y-4">
-              <FormField
-                control={createAccountForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><UserCircle className="me-2 h-4 w-4 text-muted-foreground" />{t.name}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t.namePlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createAccountForm.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.imageUrl}</FormLabel>
-                    <FormControl>
-                      <Input type="url" placeholder={t.imageUrlPlaceholder} {...field} />
-                    </FormControl>
-                    <FormDescription>{t.imageUrlDesc}</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createAccountForm.control}
-                name="age"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><CalendarDays className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={createAccountForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phone}</FormLabel>
-                    <FormControl>
-                      <Input type="tel" placeholder={t.phonePlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createAccountForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><AtSign className="me-2 h-4 w-4 text-muted-foreground" />{t.email}</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder={t.emailPlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createAccountForm.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><Lock className="me-2 h-4 w-4 text-muted-foreground" />{t.password}</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder={t.passwordPlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createAccountForm.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><ShieldCheck className="me-2 h-4 w-4 text-muted-foreground" />{t.confirmPassword}</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder={t.confirmPasswordPlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-6" disabled={createAccountForm.formState.isSubmitting}>
-                 {createAccountForm.formState.isSubmitting ? (
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  ) : (
-                    <UserPlus className="me-2 h-4 w-4" />
-                  )}
-                  {t.createAccountButton}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="create-account" className="w-full max-w-md">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="create-account" className="py-3">
+            <UserPlus className="me-2 h-5 w-5" /> {t.createAccountTab}
+          </TabsTrigger>
+          <TabsTrigger value="login" className="py-3">
+            <LogIn className="me-2 h-5 w-5" /> {t.loginTab}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="create-account">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-headline">{t.createAccountCardTitle}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...createAccountForm}>
+                <form onSubmit={createAccountForm.handleSubmit(onCreateAccountSubmit)} className="space-y-4">
+                  <FormField
+                    control={createAccountForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><UserCircle className="me-2 h-4 w-4 text-muted-foreground" />{t.name}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t.namePlaceholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createAccountForm.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.imageUrl}</FormLabel>
+                        <FormControl>
+                          <Input type="url" placeholder={t.imageUrlPlaceholder} {...field} />
+                        </FormControl>
+                        <FormDescription>{t.imageUrlDesc}</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createAccountForm.control}
+                    name="age"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><CalendarDays className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
+                        <FormControl>
+                           <Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={createAccountForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phone}</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder={t.phonePlaceholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createAccountForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><AtSign className="me-2 h-4 w-4 text-muted-foreground" />{t.email}</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder={t.emailPlaceholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createAccountForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><Lock className="me-2 h-4 w-4 text-muted-foreground" />{t.password}</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder={t.passwordPlaceholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createAccountForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><ShieldCheck className="me-2 h-4 w-4 text-muted-foreground" />{t.confirmPassword}</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder={t.confirmPasswordPlaceholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-6" disabled={createAccountForm.formState.isSubmitting}>
+                    {createAccountForm.formState.isSubmitting ? <LoadingSpinner className="me-2" /> : <UserPlus className="me-2 h-4 w-4" />}
+                    {t.createAccountButton}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="login">
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-headline">{t.loginCardTitle}</CardTitle>
+              <CardDescription>{t.loginCardDescription}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                  <FormField
+                    control={loginForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><AtSign className="me-2 h-4 w-4 text-muted-foreground" />{t.email}</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder={t.emailPlaceholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={loginForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center"><Lock className="me-2 h-4 w-4 text-muted-foreground" />{t.password}</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder={t.passwordPlaceholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-6" disabled={loginForm.formState.isSubmitting}>
+                    {loginForm.formState.isSubmitting ? <LoadingSpinner className="me-2" /> : <LogIn className="me-2 h-4 w-4" />}
+                    {t.loginButton}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
-
-    
