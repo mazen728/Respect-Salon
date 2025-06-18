@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Mail, Cake, ShieldCheck, KeyRound, Save, Edit3, Eye, EyeOff } from 'lucide-react';
+import { UserCircle, Mail, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff } from 'lucide-react'; // Changed KeyRound to Phone
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -262,7 +262,7 @@ export default function ProfilePage() {
                 <span>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
               </div>
                <div className="flex items-center justify-center text-muted-foreground">
-                <KeyRound className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
+                <Phone className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} /> 
                 <span>{userProfile.phoneNumber || t.noPhoneNumber}</span>
               </div>
             </CardContent>
