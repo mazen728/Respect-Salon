@@ -10,6 +10,7 @@ import { salonInfo as getSalonInfo, getMockReviews } from '@/lib/mockData';
 import { fetchPromotionsFromFirestore, getPromotionsVisibilitySetting } from '@/lib/firebase';
 import type { Locale, Promotion, Review, SalonInfoData } from '@/lib/types';
 import { Percent, Star, MapPin, Ticket, AlertTriangle, Instagram, Facebook } from 'lucide-react';
+import { SeedPromotionsButton } from '@/components/SeedPromotionsButton';
 
 interface FetchedData {
   currentLocale: Locale;
@@ -152,6 +153,10 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
           </div>
         </section>
 
+        <div className="container mx-auto px-6 my-8 text-center">
+          <SeedPromotionsButton locale={currentLocale} />
+        </div>
+        
         {/* Promotions Section Logic */}
         {promotionsVisible && promotionsData.length > 0 ? (
           <section id="promotions" className="py-16 bg-background">
@@ -263,3 +268,4 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     </div>
   );
 }
+

@@ -57,6 +57,7 @@ export interface RawPromotionData {
 const rawMockPromotionsData: RawPromotionData[] = [
   { id: 'p1', title: { en: 'Mid-Week Majesty', ar: 'جلال منتصف الأسبوع' }, description: { en: '20% off all services on Wednesdays!', ar: 'خصم 20% على جميع الخدمات أيام الأربعاء!' }, couponCode: 'WEDNESDAY20', imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'salon interior promotion', icon: Percent },
   { id: 'p2', title: { en: 'New Client Welcome', ar: 'ترحيب بالعميل الجديد' }, description: { en: 'First-time customers get 15% off their first service.', ar: 'يحصل العملاء الجدد على خصم 15% على خدمتهم الأولى.' }, imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'barber tools flatlay', icon: Star },
+  { id: 'p3', title: { en: 'Weekend Relaxation Package', ar: 'باقة استرخاء نهاية الأسبوع' }, description: { en: 'Special price on Haircut + Steam & Massage this weekend!', ar: 'سعر خاص على قصة الشعر + بخار ومساج في نهاية هذا الأسبوع!' }, couponCode: 'WEEKENDRELAX', imageUrl: 'https://placehold.co/600x400.png', dataAiHint: 'spa treatment products', icon: Zap },
 ];
 
 // Function to get raw data for seeding
@@ -198,3 +199,4 @@ export const mockUserProfile = getMockUserProfile('en'); // Fallback or default
     
 
     
+
