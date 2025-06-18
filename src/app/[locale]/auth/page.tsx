@@ -90,7 +90,7 @@ const translations = {
     forgotPasswordDescription: "Enter your phone number to initiate the password reset process.",
     sendResetInstructions: "Send Reset Instructions",
     passwordResetInitiated: "Password Reset Initiated",
-    passwordResetInitiatedDesc: "A password reset process has been started for the account linked to this phone number. Since sign-up uses a phone number without a directly accessible email, you won't receive an email with a reset link. Please contact support if you need further assistance to regain access.",
+    passwordResetInitiatedDesc: "Account found and password reset process initiated. You will not receive a reset email due to the phone-based setup. Please contact support with your phone number to complete the password reset.",
     phoneNotFoundForReset: "Phone number not found. Please ensure you entered the correct number or create an account.",
     passwordResetError: "Password Reset Error",
   },
@@ -145,7 +145,7 @@ const translations = {
     forgotPasswordDescription: "أدخل رقم هاتفك لبدء عملية إعادة تعيين كلمة المرور.",
     sendResetInstructions: "إرسال تعليمات إعادة التعيين",
     passwordResetInitiated: "بدء عملية إعادة تعيين كلمة المرور",
-    passwordResetInitiatedDesc: "بدأت عملية إعادة تعيين كلمة المرور للحساب المرتبط برقم الهاتف هذا. بما أن التسجيل يستخدم رقم هاتف بدون بريد إلكتروني يمكن الوصول إليه مباشرة، فلن تتلقى بريدًا إلكترونيًا يحتوي على رابط لإعادة التعيين. يرجى الاتصال بالدعم إذا كنت بحاجة إلى مزيد من المساعدة لاستعادة الوصول.",
+    passwordResetInitiatedDesc: "تم العثور على الحساب وبدء عملية إعادة تعيين كلمة المرور. لن تتلقى بريدًا إلكترونيًا لإعادة التعيين بسبب الإعداد المعتمد على رقم الهاتف. يرجى الاتصال بالدعم مع ذكر رقم هاتفك لإكمال إعادة تعيين كلمة المرور.",
     phoneNotFoundForReset: "رقم الهاتف غير موجود. يرجى التأكد من إدخال الرقم الصحيح أو إنشاء حساب.",
     passwordResetError: "خطأ في إعادة تعيين كلمة المرور",
   },
@@ -179,7 +179,7 @@ export default function AuthPage() {
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, locale, t]);
+  }, [router, locale]); // Removed `t` from dependencies as it's stable per locale
 
 
   const createAccountFormSchema = z.object({
@@ -293,11 +293,11 @@ export default function AuthPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, values.password);
       const user = userCredential.user;
       await upsertUserData(user.uid, {
-        email: dummyEmail,
+        email: dummyEmail, // Store the dummy email
         name: values.name,
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
-        phoneNumber: values.phone,
+        phoneNumber: values.phone, // Store the actual phone number
         isAnonymous: false,
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
@@ -311,7 +311,8 @@ export default function AuthPage() {
     try {
       const dummyEmail = generateDummyEmailFromPhone(values.phone);
       const userCredential = await signInWithEmailAndPassword(auth, dummyEmail, values.password);
-      await upsertUserData(userCredential.user.uid, { email: dummyEmail, phoneNumber: values.phone }); // Update lastLogin, ensure phone is there
+      // Optionally update lastLogin or ensure phone number is in Firestore if it wasn't (though create should handle it)
+      await upsertUserData(userCredential.user.uid, { email: dummyEmail, phoneNumber: values.phone });
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
       // router.push(`/${locale}/profile`); // Already handled by onAuthStateChanged
     } catch (error) {
@@ -327,17 +328,20 @@ export default function AuthPage() {
         toast({
           title: t.passwordResetInitiated,
           description: t.passwordResetInitiatedDesc,
-          duration: 10000, // Longer duration for important message
+          duration: 10000, 
         });
         setIsForgotPasswordAlertOpen(false);
         forgotPasswordForm.reset();
       } else {
+        // This case should ideally set an error on the form field
         forgotPasswordForm.setError("phone", { type: "manual", message: t.phoneNotFoundForReset });
-        // Toast is handled by setError or general error handler
+        // toast({ variant: "destructive", title: t.passwordResetError, description: t.phoneNotFoundForReset });
       }
     } catch (error) {
       // Check if the error is specifically user-not-found for the email
       if (error instanceof Error && (error as AuthError).code === 'auth/user-not-found') {
+         // This means the dummy email (derived from phone) wasn't found in Firebase Auth
+         // This is essentially the same as phoneNotFoundForReset for our purposes
          forgotPasswordForm.setError("phone", { type: "manual", message: t.phoneNotFoundForReset });
       } else {
         handleAuthError(error as AuthError | Error, 'reset');
@@ -563,3 +567,5 @@ export default function AuthPage() {
     </div>
   );
 }
+
+    
