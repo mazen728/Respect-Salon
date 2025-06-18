@@ -22,9 +22,9 @@ interface FetchedData {
   usingFirestorePromotions: boolean;
 }
 
-// fetchData now accepts locale as a direct string argument
-async function fetchData(resolvedLocale: Locale): Promise<FetchedData> {
-  // resolvedLocale is already awaited and extracted by the caller (HomePage)
+// fetchData now accepts the params object
+async function fetchData(params: { locale: Locale }): Promise<FetchedData> {
+  const resolvedLocale = params.locale; // Access locale inside the async function
 
   const promotionsVisible = await getPromotionsVisibilitySetting();
   const salonInfoData = getSalonInfo(resolvedLocale);
@@ -54,7 +54,7 @@ async function fetchData(resolvedLocale: Locale): Promise<FetchedData> {
   }
 
   return {
-    currentLocale: resolvedLocale, // Return the passed-in locale
+    currentLocale: resolvedLocale,
     promotionsVisible,
     salonInfoData,
     mockReviewsData,
@@ -66,11 +66,11 @@ async function fetchData(resolvedLocale: Locale): Promise<FetchedData> {
 }
 
 export default async function HomePage({ params }: { params: { locale: Locale } }) {
-  await Promise.resolve(); // Ensure params object itself is awaited/available
-  const pageLocale = params.locale; // Extract locale AFTER the await
+  await Promise.resolve(); // Ensure params object itself is awaited/available, or for Suspense behavior
 
+  // Pass the whole params object to fetchData
   const {
-    currentLocale, // This will be pageLocale
+    currentLocale,
     promotionsVisible,
     salonInfoData,
     mockReviewsData,
@@ -78,7 +78,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     fetchError,
     firebaseErrorType,
     // usingFirestorePromotions, // Not directly used in JSX, but available
-  } = await fetchData(pageLocale); // Pass the resolved pageLocale string
+  } = await fetchData(params);
 
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
 
@@ -262,4 +262,3 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     </div>
   );
 }
-
