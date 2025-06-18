@@ -35,8 +35,6 @@ const translations = {
     createAccountCardTitle: "Enter Your Details",
     loginCardTitle: "Welcome Back",
     loginCardDescription: "Enter your credentials to access your account.",
-    // email: "Email Address",
-    // emailPlaceholder: "name@example.com",
     password: "Password",
     passwordPlaceholder: "••••••••",
     name: "Full Name",
@@ -60,10 +58,8 @@ const translations = {
     genericError: "An unexpected error occurred. Please try again.",
     authError: "Authentication Error",
     loginError: "Login Error",
-    // emailInUse: "This email is already in use. Please use a different email or log in.",
     phoneInUseError: "This phone number seems to be associated with an existing account. Please try logging in.",
     weakPassword: "Password is too weak. It should be at least 6 characters.",
-    // invalidEmail: "Invalid email address format.",
     userNotFound: "No user found with this phone number. Please check your number or create an account.",
     wrongPassword: "Incorrect password. Please try again.",
     nameMin: "Name must be at least 2 characters.",
@@ -86,8 +82,6 @@ const translations = {
     createAccountCardTitle: "أدخل بياناتك",
     loginCardTitle: "أهلاً بعودتك",
     loginCardDescription: "أدخل بيانات اعتمادك للوصول إلى حسابك.",
-    // email: "البريد الإلكتروني",
-    // emailPlaceholder: "name@example.com",
     password: "كلمة المرور",
     passwordPlaceholder: "••••••••",
     name: "الاسم الكامل",
@@ -111,10 +105,8 @@ const translations = {
     genericError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
     authError: "خطأ في المصادقة",
     loginError: "خطأ في تسجيل الدخول",
-    // emailInUse: "هذا البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد إلكتروني آخر أو تسجيل الدخول.",
     phoneInUseError: "يبدو أن رقم الهاتف هذا مرتبط بحساب موجود. يرجى محاولة تسجيل الدخول.",
     weakPassword: "كلمة المرور ضعيفة جداً. يجب أن تتكون من 6 أحرف على الأقل.",
-    // invalidEmail: "صيغة البريد الإلكتروني غير صالحة.",
     userNotFound: "لم يتم العثور على مستخدم برقم الهاتف هذا. يرجى التحقق من رقمك أو إنشاء حساب.",
     wrongPassword: "كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
     nameMin: "يجب أن يتكون الاسم من حرفين على الأقل.",
@@ -131,9 +123,8 @@ const translations = {
   },
 };
 
-// Helper to generate a dummy email from phone number
 const generateDummyEmailFromPhone = (phone: string) => {
-  const sanitizedPhone = phone.startsWith('+') ? phone.substring(1) : phone; // Remove '+' if present
+  const sanitizedPhone = phone.startsWith('+') ? phone.substring(1) : phone;
   return `user-${sanitizedPhone.replace(/\D/g, '')}@auth.local`;
 };
 
@@ -145,6 +136,7 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
+  const t = translations[locale] || translations.en;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -157,10 +149,8 @@ export default function AuthPage() {
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, locale]); // t was removed as it's defined later
+  }, [router, locale, t]);
 
-
-  const t = translations[locale] || translations.en;
 
   const createAccountFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
@@ -172,7 +162,6 @@ export default function AuthPage() {
     phone: z.string()
       .min(1, { message: t.phoneRequired })
       .regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
-    // email: z.string().email({ message: t.invalidEmail }), // Removed email
     password: z.string().min(6, { message: t.weakPassword }),
     confirmPassword: z.string(),
   }).refine(data => data.password === data.confirmPassword, {
@@ -182,7 +171,6 @@ export default function AuthPage() {
   type CreateAccountFormValues = z.infer<typeof createAccountFormSchema>;
 
   const loginFormSchema = z.object({
-    // email: z.string().email({ message: t.invalidEmail }), // Removed email
     phone: z.string().min(1, {message: t.phoneRequired}),
     password: z.string().min(1, { message: t.passwordPlaceholder }),
   });
@@ -195,7 +183,6 @@ export default function AuthPage() {
       imageUrl: "",
       age: undefined,
       phone: "",
-      // email: "", // Removed email
       password: "",
       confirmPassword: "",
     },
@@ -204,7 +191,6 @@ export default function AuthPage() {
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      // email: "", // Removed email
       phone: "",
       password: "",
     },
@@ -218,15 +204,10 @@ export default function AuthPage() {
     if ('code' in error && typeof (error as AuthError).code === 'string') {
       const authError = error as AuthError;
       switch (authError.code) {
-        case 'auth/email-already-in-use': // This code might still appear if the generated dummy email collides
-          description = t.phoneInUseError; // Changed to a phone-specific message
+        case 'auth/email-already-in-use':
+          description = t.phoneInUseError;
           if (formType === 'create') createAccountForm.setError("phone", { type: "manual", message: description });
           break;
-        // case 'auth/invalid-email': // Less likely with generated emails, but keep for safety
-        //   description = t.invalidEmail;
-        //   if (formType === 'create') createAccountForm.setError("phone", { type: "manual", message: "Internal error: Invalid format for generated email." });
-        //   if (formType === 'login') loginForm.setError("phone", { type: "manual", message: "Internal error: Invalid format for generated email." });
-        //   break;
         case 'auth/weak-password':
           description = t.weakPassword;
           if (formType === 'create') createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
@@ -255,18 +236,15 @@ export default function AuthPage() {
     }
 
     toast({ variant: "destructive", title, description });
-    if (formType === 'create') createAccountForm.formState.isSubmitting = false;
-    if (formType === 'login') loginForm.formState.isSubmitting = false;
   };
 
   async function onCreateAccountSubmit(values: CreateAccountFormValues) {
-    createAccountForm.formState.isSubmitting = true;
     try {
       const dummyEmail = generateDummyEmailFromPhone(values.phone);
       const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, values.password);
       const user = userCredential.user;
       await upsertUserData(user.uid, {
-        email: dummyEmail, // Store the dummy email
+        email: dummyEmail,
         name: values.name,
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
@@ -274,31 +252,19 @@ export default function AuthPage() {
         isAnonymous: false,
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
-      // Redirection is handled by onAuthStateChanged
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'create');
-    } finally {
-        if (createAccountForm && createAccountForm.formState.isSubmitting) {
-             createAccountForm.formState.isSubmitting = false;
-        }
     }
   }
 
   async function onLoginSubmit(values: LoginFormValues) {
-    loginForm.formState.isSubmitting = true;
     try {
       const dummyEmail = generateDummyEmailFromPhone(values.phone);
       const userCredential = await signInWithEmailAndPassword(auth, dummyEmail, values.password);
-      // upsertUserData will update lastLoginAt and ensure email is consistent
-      await upsertUserData(userCredential.user.uid, { email: dummyEmail, phoneNumber: values.phone }); // Pass phone number to ensure it's in DB if login is first interaction post-migration
+      await upsertUserData(userCredential.user.uid, { email: dummyEmail, phoneNumber: values.phone });
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
-      // Redirection is handled by onAuthStateChanged
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'login');
-    } finally {
-        if (loginForm && loginForm.formState.isSubmitting) {
-            loginForm.formState.isSubmitting = false;
-        }
     }
   }
 
@@ -394,7 +360,6 @@ export default function AuthPage() {
                       </FormItem>
                     )}
                   />
-                  {/* Email field removed from create account form */}
                   <FormField
                     control={createAccountForm.control}
                     name="password"
@@ -442,7 +407,7 @@ export default function AuthPage() {
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
-                    name="phone" // Changed from email to phone
+                    name="phone"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phone}</FormLabel>
@@ -479,3 +444,6 @@ export default function AuthPage() {
     </div>
   );
 }
+
+
+    
