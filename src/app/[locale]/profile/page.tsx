@@ -1,360 +1,352 @@
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState, useEffect, type FormEvent } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useParams } from 'next/navigation'; // Import useParams
-import { getMockUserProfile } from '@/lib/mockData';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "@/hooks/use-toast";
-import { User, KeyRound, Bell, CreditCard, Save } from 'lucide-react';
-import type { Locale } from "@/lib/types";
 
-// Removed params from props interface
-// interface ProfilePageProps {
-//   params: { locale: Locale };
-// }
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, type User as FirebaseUser } from 'firebase/auth';
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { UserCircle, Mail, Cake, ShieldCheck, KeyRound, Save, Edit3, Eye, EyeOff } from 'lucide-react';
+import type { Locale } from "@/lib/types";
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+
+interface UserProfileData {
+  name: string | null;
+  email: string | null;
+  imageUrl: string | null;
+  age: number | null;
+  phoneNumber: string | null;
+}
 
 const translations = {
   en: {
-    pageTitle: "Your Royal Profile",
-    pageDescription: "Manage your personal details, preferences, and settings.",
+    pageTitle: "Your Profile",
+    pageDescription: "View your personal details and manage your account settings.",
     personalInfo: "Personal Information",
-    personalInfoDesc: "Update your personal details here.",
-    fullName: "Full Name",
-    fullNamePlaceholder: "e.g., Valued Customer",
+    name: "Full Name",
+    age: "Age",
     emailAddress: "Email Address",
-    emailPlaceholder: "customer@example.com",
     phoneNumber: "Phone Number",
-    phonePlaceholder: "+1234567890",
-    addressOptional: "Address (Optional)",
-    addressPlaceholder: "123 Royal Palace, Capital City",
+    profilePicture: "Profile Picture",
+    noName: "Not Provided",
+    noAge: "Not Provided",
+    noPhoneNumber: "Not Provided",
     passwordSettings: "Password Settings",
-    passwordSettingsDesc: "Change your password. Leave blank if you don't want to change it.",
+    passwordSettingsDesc: "Change your password. Requires current password.",
+    currentPassword: "Current Password",
     newPassword: "New Password",
     confirmNewPassword: "Confirm New Password",
-    notificationPrefs: "Notification Preferences",
-    notificationPrefsDesc: "Manage how we contact you.",
-    appointmentReminders: "Appointment Reminders",
-    appointmentRemindersDesc: "Receive reminders for your upcoming appointments.",
-    promotionsOffers: "Promotions & Offers",
-    promotionsOffersDesc: "Get notified about new promotions and special offers.",
-    serviceUpdates: "Service Updates",
-    serviceUpdatesDesc: "Receive updates about new services or changes.",
-    savedPayments: "Saved Payment Methods",
-    savedPaymentsDesc: "Manage your saved payment methods (mock data).",
-    endingIn: "ending in",
-    expires: "Expires",
-    remove: "Remove",
-    noSavedPayments: "No saved payment methods.",
-    addNewPayment: "Add New Payment Method",
-    saveChanges: "Save Changes",
-    profileUpdated: "Profile Updated",
-    profileUpdatedDesc: "Your profile information has been saved successfully.",
-    passwordsDontMatch: "Passwords don't match",
-    nameMin: "Name must be at least 2 characters.",
-    nameMax: "Name must be at most 50 characters.",
-    invalidEmail: "Invalid email address.",
-    phoneMin: "Phone number seems too short.",
-    phoneMax: "Phone number seems too long.",
-    passwordMin: "New password must be at least 8 characters.",
+    updatePasswordButton: "Update Password",
+    passwordUpdatedSuccess: "Password Updated Successfully",
+    passwordUpdatedError: "Failed to Update Password",
+    reauthenticationNeeded: "Re-authentication successful. You can now update your password.",
+    reauthenticationFailed: "Re-authentication failed. Please check your current password.",
+    passwordsDontMatch: "New passwords do not match.",
+    passwordMinLength: "New password must be at least 6 characters.",
     loading: "Loading profile...",
+    errorFetchingProfile: "Could not load profile data.",
+    userNotAuthenticated: "User not authenticated. Redirecting to login...",
+    currentPasswordIncorrect: "Current password is incorrect.",
+    tooManyRequests: "Too many recent attempts. Please try again later.",
   },
   ar: {
-    pageTitle: "ملفك الشخصي الملكي",
-    pageDescription: "إدارة التفاصيل الشخصية والتفضيلات والإعدادات الخاصة بك.",
+    pageTitle: "ملفك الشخصي",
+    pageDescription: "عرض تفاصيلك الشخصية وإدارة إعدادات حسابك.",
     personalInfo: "المعلومات الشخصية",
-    personalInfoDesc: "قم بتحديث التفاصيل الشخصية الخاصة بك هنا.",
-    fullName: "الاسم الكامل",
-    fullNamePlaceholder: "مثال: عميل مميز",
-    emailAddress: "عنوان البريد الإلكتروني",
-    emailPlaceholder: "customer@example.com",
+    name: "الاسم الكامل",
+    age: "العمر",
+    emailAddress: "البريد الإلكتروني",
     phoneNumber: "رقم الهاتف",
-    phonePlaceholder: "+1234567890",
-    addressOptional: "العنوان (اختياري)",
-    addressPlaceholder: "123 القصر الملكي، العاصمة",
+    profilePicture: "الصورة الشخصية",
+    noName: "غير متوفر",
+    noAge: "غير متوفر",
+    noPhoneNumber: "غير متوفر",
     passwordSettings: "إعدادات كلمة المرور",
-    passwordSettingsDesc: "قم بتغيير كلمة المرور الخاصة بك. اترك الحقل فارغًا إذا كنت لا ترغب في تغييرها.",
+    passwordSettingsDesc: "قم بتغيير كلمة المرور الخاصة بك. يتطلب كلمة المرور الحالية.",
+    currentPassword: "كلمة المرور الحالية",
     newPassword: "كلمة المرور الجديدة",
     confirmNewPassword: "تأكيد كلمة المرور الجديدة",
-    notificationPrefs: "تفضيلات الإشعارات",
-    notificationPrefsDesc: "إدارة كيفية اتصالنا بك.",
-    appointmentReminders: "تذكيرات المواعيد",
-    appointmentRemindersDesc: "استقبل تذكيرات لمواعيدك القادمة.",
-    promotionsOffers: "العروض والتخفيضات",
-    promotionsOffersDesc: "احصل على إشعارات حول العروض الجديدة والعروض الخاصة.",
-    serviceUpdates: "تحديثات الخدمة",
-    serviceUpdatesDesc: "استقبل تحديثات حول الخدمات الجديدة أو التغييرات.",
-    savedPayments: "طرق الدفع المحفوظة",
-    savedPaymentsDesc: "إدارة طرق الدفع المحفوظة (بيانات وهمية).",
-    endingIn: "تنتهي بـ",
-    expires: "تنتهي صلاحيتها في",
-    remove: "إزالة",
-    noSavedPayments: "لا توجد طرق دفع محفوظة.",
-    addNewPayment: "إضافة طريقة دفع جديدة",
-    saveChanges: "حفظ التغييرات",
-    profileUpdated: "تم تحديث الملف الشخصي",
-    profileUpdatedDesc: "تم حفظ معلومات ملفك الشخصي بنجاح.",
-    passwordsDontMatch: "كلمات المرور غير متطابقة",
-    nameMin: "يجب أن يتكون الاسم من حرفين على الأقل.",
-    nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
-    invalidEmail: "عنوان بريد إلكتروني غير صالح.",
-    phoneMin: "رقم الهاتف يبدو قصيرًا جدًا.",
-    phoneMax: "رقم الهاتف يبدو طويلًا جدًا.",
-    passwordMin: "يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل.",
-    loading: "جار تحميل الملف الشخصي...",
+    updatePasswordButton: "تحديث كلمة المرور",
+    passwordUpdatedSuccess: "تم تحديث كلمة المرور بنجاح",
+    passwordUpdatedError: "فشل تحديث كلمة المرور",
+    reauthenticationNeeded: "إعادة المصادقة ناجحة. يمكنك الآن تحديث كلمة مرورك.",
+    reauthenticationFailed: "فشلت إعادة المصادقة. يرجى التحقق من كلمة مرورك الحالية.",
+    passwordsDontMatch: "كلمات المرور الجديدة غير متطابقة.",
+    passwordMinLength: "يجب أن تتكون كلمة المرور الجديدة من 6 أحرف على الأقل.",
+    loading: "جارٍ تحميل الملف الشخصي...",
+    errorFetchingProfile: "تعذر تحميل بيانات الملف الشخصي.",
+    userNotAuthenticated: "المستخدم غير مصادق عليه. يتم التوجيه إلى صفحة تسجيل الدخول...",
+    currentPasswordIncorrect: "كلمة المرور الحالية غير صحيحة.",
+    tooManyRequests: "محاولات كثيرة مؤخرًا. يرجى المحاولة مرة أخرى لاحقًا.",
   }
 };
 
-
 export default function ProfilePage() {
-  const routeParams = useParams();
-  const locale = routeParams.locale as Locale;
+  const router = useRouter();
+  const params = useParams();
+  const locale = params.locale as Locale;
+  const { toast } = useToast();
 
-  if (!locale || (locale !== 'en' && locale !== 'ar')) {
-    return <div>Loading page...</div>;
-  }
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const t = translations[locale];
-  const mockUserProfile = getMockUserProfile(locale);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const profileFormSchema = z.object({
-    name: z.string().min(2, t.nameMin).max(50, t.nameMax),
-    email: z.string().email(t.invalidEmail),
-    phone: z.string().min(10, t.phoneMin).max(15, t.phoneMax),
-    address: z.string().optional(),
-    newPassword: z.string().min(8, t.passwordMin).optional().or(z.literal('')),
-    confirmPassword: z.string().optional().or(z.literal('')),
-    notifications: z.object({
-      appointments: z.boolean(),
-      promotions: z.boolean(),
-      serviceUpdates: z.boolean(),
-    }),
+  const t = translations[locale] || translations.en;
+
+  const passwordFormSchema = z.object({
+    currentPassword: z.string().min(1, { message: t.currentPassword }),
+    newPassword: z.string().min(6, { message: t.passwordMinLength }),
+    confirmPassword: z.string(),
   }).refine(data => data.newPassword === data.confirmPassword, {
     message: t.passwordsDontMatch,
     path: ["confirmPassword"],
   });
-  
-  type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+  type PasswordFormValues = z.infer<typeof passwordFormSchema>;
+
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordFormSchema),
     defaultValues: {
-      ...mockUserProfile,
+      currentPassword: '',
       newPassword: '',
       confirmPassword: '',
     },
-    mode: "onChange",
   });
 
-  function onSubmit(data: ProfileFormValues) {
-    console.log(data); 
-    toast({
-      title: t.profileUpdated,
-      description: t.profileUpdatedDesc,
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            setUserProfile(docSnap.data() as UserProfileData);
+          } else {
+            console.warn("User document not found in Firestore for UID:", user.uid);
+            // Fallback if Firestore data is missing for some reason
+            setUserProfile({
+              name: user.displayName,
+              email: user.email,
+              imageUrl: user.photoURL,
+              age: null, // No age info from FirebaseUser directly
+              phoneNumber: user.phoneNumber,
+            });
+          }
+        } catch (e) {
+          console.error("Error fetching user profile:", e);
+          setError(t.errorFetchingProfile);
+        }
+      } else {
+        toast({ title: t.userNotAuthenticated, variant: "destructive" });
+        router.push(`/${locale}/auth`);
+      }
+      setIsLoading(false);
     });
+    return () => unsubscribe();
+  }, [router, locale, t]);
+
+  const handlePasswordUpdate = async (values: PasswordFormValues) => {
+    if (!currentUser || !currentUser.email) {
+      toast({ title: t.passwordUpdatedError, description: "User not properly authenticated.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(currentUser.email, values.currentPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+      
+      await updatePassword(currentUser, values.newPassword);
+      toast({ title: t.passwordUpdatedSuccess });
+      passwordForm.reset();
+    } catch (err: any) {
+      console.error("Password update error:", err);
+      let description = t.passwordUpdatedError;
+      if (err.code === 'auth/wrong-password') {
+        description = t.currentPasswordIncorrect;
+        passwordForm.setError("currentPassword", { type: "manual", message: description });
+      } else if (err.code === 'auth/too-many-requests') {
+        description = t.tooManyRequests;
+      }
+      toast({ title: t.passwordUpdatedError, description, variant: "destructive" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <LoadingSpinner size={48} />
+        <p className="ms-4 text-lg">{t.loading}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-12 px-4 text-center text-destructive">
+        <p>{error}</p>
+        <Button onClick={() => router.push(`/${locale}/auth`)} className="mt-4">
+          {locale === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to Login'}
+        </Button>
+      </div>
+    );
+  }
+  
+  if (!currentUser || !userProfile) {
+     // Should be caught by isLoading or error state, but as a final fallback
+    return (
+      <div className="container mx-auto py-12 px-4 text-center">
+        <p>{t.userNotAuthenticated}</p>
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="text-center mb-10">
-        <User className="h-12 w-12 text-accent mx-auto mb-4" />
+        <UserCircle className="h-16 w-16 text-primary mx-auto mb-4" />
         <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary mb-3">{t.pageTitle}</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           {t.pageDescription}
         </p>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-1">
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl flex items-center"><User className="me-2 h-6 w-6 text-accent" /> {t.personalInfo}</CardTitle>
-              <CardDescription>{t.personalInfoDesc}</CardDescription>
+            <CardHeader className="items-center">
+              {userProfile.imageUrl ? (
+                <Image
+                  src={userProfile.imageUrl}
+                  alt={t.profilePicture}
+                  width={128}
+                  height={128}
+                  className="rounded-full object-cover border-4 border-accent"
+                  data-ai-hint="user profile picture"
+                  onError={(e: FormEvent<HTMLImageElement>) => {
+                     // Fallback if image fails to load
+                    (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png';
+                    (e.target as HTMLImageElement).alt = 'Placeholder User Image';
+                  }}
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center border-4 border-accent">
+                  <UserCircle className="h-24 w-24 text-muted-foreground" />
+                </div>
+              )}
+              <CardTitle className="font-headline text-2xl mt-4">{userProfile.name || t.noName}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.fullName}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t.fullNamePlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.emailAddress}</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder={t.emailPlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.phoneNumber}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t.phonePlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.addressOptional}</FormLabel>
-                    <FormControl>
-                      <Input placeholder={t.addressPlaceholder} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <CardContent className="text-center space-y-2">
+              <div className="flex items-center justify-center text-muted-foreground">
+                <Mail className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
+                <span>{userProfile.email || 'N/A'}</span>
+              </div>
+              <div className="flex items-center justify-center text-muted-foreground">
+                <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
+                <span>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
+              </div>
+               <div className="flex items-center justify-center text-muted-foreground">
+                <KeyRound className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
+                <span>{userProfile.phoneNumber || t.noPhoneNumber}</span>
+              </div>
             </CardContent>
           </Card>
+        </div>
 
+        <div className="md:col-span-2">
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="font-headline text-2xl flex items-center"><KeyRound className="me-2 h-6 w-6 text-accent" /> {t.passwordSettings}</CardTitle>
+              <CardTitle className="font-headline text-2xl flex items-center">
+                <ShieldCheck className={`h-6 w-6 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} /> 
+                {t.passwordSettings}
+              </CardTitle>
               <CardDescription>{t.passwordSettingsDesc}</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.newPassword}</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t.confirmNewPassword}</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl flex items-center"><Bell className="me-2 h-6 w-6 text-accent" /> {t.notificationPrefs}</CardTitle>
-              <CardDescription>{t.notificationPrefsDesc}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="notifications.appointments"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">{t.appointmentReminders}</FormLabel>
-                      <FormDescription>{t.appointmentRemindersDesc}</FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="notifications.promotions"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">{t.promotionsOffers}</FormLabel>
-                      <FormDescription>{t.promotionsOffersDesc}</FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="notifications.serviceUpdates"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">{t.serviceUpdates}</FormLabel>
-                      <FormDescription>{t.serviceUpdatesDesc}</FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl flex items-center"><CreditCard className="me-2 h-6 w-6 text-accent" /> {t.savedPayments}</CardTitle>
-              <CardDescription>{t.savedPaymentsDesc}</CardDescription>
-            </CardHeader>
             <CardContent>
-              {mockUserProfile.savedPaymentMethods.length > 0 ? (
-                <ul className="space-y-3">
-                  {mockUserProfile.savedPaymentMethods.map(method => (
-                    <li key={method.id} className="flex justify-between items-center p-3 border rounded-md">
-                      <div>
-                        <span className="font-medium">{method.type}</span>
-                        {method.last4 !== "N/A" && <span className="text-muted-foreground"> {t.endingIn} {method.last4}</span>}
-                      </div>
-                      <span className="text-sm text-muted-foreground">{t.expires} {method.expiry}</span>
-                      <Button variant="outline" size="sm" disabled>{t.remove}</Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-muted-foreground">{t.noSavedPayments}</p>
-              )}
-              <Button variant="outline" className="mt-4" disabled>{t.addNewPayment}</Button>
+              <Form {...passwordForm}>
+                <form onSubmit={passwordForm.handleSubmit(handlePasswordUpdate)} className="space-y-6">
+                  <FormField
+                    control={passwordForm.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t.currentPassword}</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input type={showCurrentPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                            <Button type="button" variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                              {showCurrentPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t.newPassword}</FormLabel>
+                        <FormControl>
+                           <div className="relative">
+                            <Input type={showNewPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                             <Button type="button" variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
+                              {showNewPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t.confirmNewPassword}</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                            <Button type="button" variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                              {showConfirmPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={passwordForm.formState.isSubmitting}>
+                    {passwordForm.formState.isSubmitting ? <LoadingSpinner size={20} className="me-2"/> : <Save className="h-5 w-5 me-2" /> }
+                    {t.updatePasswordButton}
+                  </Button>
+                </form>
+              </Form>
             </CardContent>
           </Card>
-
-          <div className="flex justify-end">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Save className="me-2 h-5 w-5" /> {t.saveChanges}
-            </Button>
-          </div>
-        </form>
-      </Form>
+        </div>
+      </div>
     </div>
   );
 }
+
+    
