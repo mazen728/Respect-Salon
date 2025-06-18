@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { auth, upsertUserData } from '@/lib/firebase';
+import { auth, upsertUserData, checkPhoneNumberExists } from '@/lib/firebase'; // Added checkPhoneNumberExists
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError, onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 
@@ -71,6 +71,7 @@ const translations = {
     ageMax: "Age seems too high.",
     phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
     phoneRequired: "Phone number is required.",
+    phoneAlreadyExists: "This phone number is already registered. If this is your number, please try logging in or use the 'Forgot Password' option with your email.",
     configurationNotFound: "Firebase auth configuration not found. Please ensure sign-in methods are enabled in Firebase console.",
     firestoreError: "Database Error",
     firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem. Please check your Firestore security rules.",
@@ -121,6 +122,7 @@ const translations = {
     ageMax: "العمر يبدو كبيرًا جدًا.",
     phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
     phoneRequired: "رقم الهاتف مطلوب.",
+    phoneAlreadyExists: "رقم الهاتف هذا مسجل بالفعل. إذا كان هذا رقمك، يرجى محاولة تسجيل الدخول أو استخدام خيار 'نسيت كلمة المرور' مع بريدك الإلكتروني.",
     configurationNotFound: "لم يتم العثور على تكوين المصادقة في Firebase. يرجى التأكد من تفعيل أساليب تسجيل الدخول في لوحة تحكم Firebase.",
     firestoreError: "خطأ في قاعدة البيانات",
     firestorePermissionsError: "تعذر حفظ معلومات ملفك الشخصي بسبب مشكلات في أذونات قاعدة البيانات. هذه مشكلة في إعدادات الخادم. يرجى التحقق من قواعد الأمان في Firestore.",
@@ -140,19 +142,18 @@ export default function AuthPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // User is signed in, redirect them to profile page.
         toast({ title: t.alreadyLoggedIn });
         router.push(`/${locale}/profile`);
       } else {
-        // User is signed out.
         setIsCheckingAuth(false);
       }
     });
-    return () => unsubscribe(); // Cleanup subscription
-  }, [router, locale, toast]);
+    return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, locale]);
 
 
-  const t = translations[locale] || translations.en; // Ensure t is initialized after locale check or with fallback
+  const t = translations[locale] || translations.en;
 
   const createAccountFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
@@ -252,6 +253,15 @@ export default function AuthPage() {
   async function onCreateAccountSubmit(values: CreateAccountFormValues) {
     createAccountForm.formState.isSubmitting = true;
     try {
+      // Check if phone number already exists
+      const phoneExists = await checkPhoneNumberExists(values.phone);
+      if (phoneExists) {
+        createAccountForm.setError("phone", { type: "manual", message: t.phoneAlreadyExists });
+        toast({ variant: "destructive", title: t.authError, description: t.phoneAlreadyExists });
+        createAccountForm.formState.isSubmitting = false;
+        return;
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
       await upsertUserData(user.uid, {
@@ -265,12 +275,16 @@ export default function AuthPage() {
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
       // Redirection is handled by onAuthStateChanged
     } catch (error) {
-      handleAuthError(error as AuthError | Error, 'create');
+      // Check if the error is from our custom phone check or Firebase auth/Firestore
+      if (error instanceof Error && error.message.startsWith("Firestore: Error checking phone number")) {
+          toast({ variant: "destructive", title: t.authError, description: t.genericError });
+          createAccountForm.formState.isSubmitting = false;
+      } else {
+         handleAuthError(error as AuthError | Error, 'create');
+      }
     } finally {
-        // Ensure isSubmitting is reset even if redirect happens before this line.
-        // This might not be strictly necessary if onAuthStateChanged handles redirection immediately
-        // but it's safer.
-        if (createAccountForm) {
+        // Ensure isSubmitting is reset if not already done
+        if (createAccountForm && createAccountForm.formState.isSubmitting) {
              createAccountForm.formState.isSubmitting = false;
         }
     }
@@ -280,14 +294,14 @@ export default function AuthPage() {
     loginForm.formState.isSubmitting = true;
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
-      await upsertUserData(user.uid, { email: user.email }); // Only update lastLogin & email if needed
+      // upsertUserData will update lastLoginAt and ensure email is consistent if it changed (though unlikely for login)
+      await upsertUserData(userCredential.user.uid, { email: userCredential.user.email });
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
       // Redirection is handled by onAuthStateChanged
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'login');
     } finally {
-        if (loginForm) {
+        if (loginForm && loginForm.formState.isSubmitting) {
             loginForm.formState.isSubmitting = false;
         }
     }

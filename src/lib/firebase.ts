@@ -60,39 +60,30 @@ export async function upsertUserData(uid: string, data: {
       lastLoginAt: serverTimestamp(),
     };
 
-    // Prepare the payload for Firestore.
-    // For updates, only defined fields in 'data' will be included.
-    // For creates, all relevant fields from 'data' (nulls included, undefineds excluded) will be set.
     const payload: any = {};
+    // Only include fields that are explicitly passed (not undefined)
     if (data.email !== undefined) payload.email = data.email;
     if (data.name !== undefined) payload.name = data.name;
-    if (data.imageUrl !== undefined) payload.imageUrl = data.imageUrl; // Will be null if passed as null
-    if (data.age !== undefined) payload.age = data.age; // Will be null or a number
-    if (data.phoneNumber !== undefined) payload.phoneNumber = data.phoneNumber; // Will be null if passed as null
+    if (data.imageUrl !== undefined) payload.imageUrl = data.imageUrl;
+    if (data.age !== undefined) payload.age = data.age;
+    if (data.phoneNumber !== undefined) payload.phoneNumber = data.phoneNumber;
     if (data.isAnonymous !== undefined) payload.isAnonymous = data.isAnonymous;
 
 
     if (docSnap.exists()) {
-      // Update existing document
-      // updateDoc only modifies fields present in the payload.
-      // If a field in payload is null, it updates it to null in Firestore.
-      // If a field from the existing document is not in payload, it's untouched.
       await updateDoc(userRef, {
         ...payload,
         ...commonData,
       });
-      console.log("User data updated in Firestore for UID:", uid, "with data:", payload);
+      console.log("User data updated in Firestore for UID:", uid);
     } else {
-      // Create new document
-      // setDoc will write all fields from payload.
-      // uid is also added to the document body for easier querying if needed, though doc ID is the uid.
       await setDoc(userRef, {
-        ...payload,
         uid, // Storing uid in the document body as well
         createdAt: serverTimestamp(),
+        ...payload, // email, name, imageUrl, age, phoneNumber, isAnonymous if provided
         ...commonData,
       });
-      console.log("New user data created in Firestore for UID:", uid, "with data:", payload);
+      console.log("New user data created in Firestore for UID:", uid);
     }
   } catch (error) {
     console.error(`Error upserting user data for UID ${uid} in Firestore:`, error);
@@ -100,6 +91,28 @@ export async function upsertUserData(uid: string, data: {
         console.error("Firestore Security Rules might be denying access for 'users' collection.");
     }
     throw new Error(`Firestore: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+  }
+}
+
+// Function to check if a phone number already exists in Firestore
+export async function checkPhoneNumberExists(phoneNumber: string): Promise<boolean> {
+  if (!firebaseConfig.projectId) {
+    console.warn("Firebase project ID not configured. Phone number check skipped.");
+    // Depending on policy, you might want to throw an error or return true to prevent creation
+    return false;
+  }
+  try {
+    const usersRef = collection(db, 'users');
+    // Ensure that the phoneNumber field is correctly indexed in Firestore for efficient querying
+    const q = query(usersRef, where('phoneNumber', '==', phoneNumber), limit(1));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty; // true if phone number exists
+  } catch (error) {
+    console.error("Error checking phone number in Firestore:", error);
+    // If the check fails (e.g., network issue, permissions for this specific query),
+    // rethrowing or returning true would prevent account creation which is safer.
+    // Returning false would allow creation even if check failed, potentially leading to duplicates.
+    throw new Error(`Firestore: Error checking phone number: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
 
@@ -325,5 +338,4 @@ export async function seedPromotionsData(): Promise<string> {
     return `Error during promotions seeding: ${specificError}`;
   }
 }
-
     
