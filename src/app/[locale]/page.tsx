@@ -66,9 +66,10 @@ async function fetchData(params: { locale: Locale }): Promise<FetchedData> {
 }
 
 export default async function HomePage({ params }: { params: { locale: Locale } }) {
-  await Promise.resolve(); // Ensure params object itself is awaited/available, or for Suspense behavior
+  // Explicitly "await" the params object to satisfy Next.js for dynamic routes.
+  const awaitedParams = await Promise.resolve(params);
 
-  // Pass the whole params object to fetchData
+  // Pass the awaited params object to fetchData
   const {
     currentLocale,
     promotionsVisible,
@@ -78,7 +79,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     fetchError,
     firebaseErrorType,
     // usingFirestorePromotions, // Not directly used in JSX, but available
-  } = await fetchData(params);
+  } = await fetchData(awaitedParams);
 
   const t = (key: keyof typeof salonInfoData.translations) => salonInfoData.translations[key];
 
