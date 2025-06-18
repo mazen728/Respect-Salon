@@ -60,13 +60,13 @@ export interface Review {
 export interface UserProfileData {
   uid?: string; 
   name: string | null;
-  email: string | null; // This will store the dummy email
+  email: string | null; // Will store the actual Google email
   imageUrl: string | null;
-  age: number | null;
-  phoneNumber: string | null; // This stores the actual phone number
+  age: number | null; // Optional, user-provided
+  phoneNumber: string | null; // Optional, user-provided
   createdAt?: any; // Firestore ServerTimestamp
   lastLoginAt?: any; // Firestore ServerTimestamp
-  isAnonymous?: boolean;
+  isAnonymous?: boolean; // Should be false for Google users
 }
 
 
@@ -104,4 +104,3 @@ export interface SalonInfoData {
   galleryImages: Array<{ url: string; alt: string; dataAiHint?: string }>;
   translations: SalonInfoTranslations;
 }
-

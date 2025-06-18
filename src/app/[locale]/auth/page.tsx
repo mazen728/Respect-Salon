@@ -3,14 +3,10 @@
 
 import type { Locale } from "@/lib/types";
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { auth, upsertUserData, findUserByPhoneNumber, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError, onAuthStateChanged } from 'firebase/auth';
+import { auth, signInWithGoogle, upsertUserData } from '@/lib/firebase';
+import { onAuthStateChanged, type AuthError } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { salonInfo as getSalonInfo } from '@/lib/mockData';
-
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,149 +16,50 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, UserPlus, LogIn, Image as ImageIcon, Phone, Lock, ShieldCheck, CalendarDays, HelpCircle, Send } from 'lucide-react';
+import { UserCircle, LogIn } from 'lucide-react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+
+// Google Icon SVG (simple one)
+const GoogleIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px">
+    <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+    <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+    <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+    <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.988,35.953,44,30.605,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+  </svg>
+);
 
 
 const translations = {
   en: {
-    pageTitle: "Account Access",
-    pageDescription: "Create a new account or log in to manage your appointments and preferences.",
-    createAccountTab: "Create Account",
-    loginTab: "Login",
-    createAccountCardTitle: "Enter Your Details",
-    loginCardTitle: "Welcome Back",
-    loginCardDescription: "Enter your credentials to access your account.",
-    password: "Password",
-    passwordPlaceholder: "••••••••",
-    name: "Full Name",
-    namePlaceholder: "e.g., John Doe",
-    imageUrl: "Image URL (Optional)",
-    imageUrlPlaceholder: "https://example.com/your-image.png",
-    imageUrlDesc: "Link to your profile picture.",
-    age: "Age (Optional)",
-    agePlaceholder: "e.g., 30",
-    phone: "Phone Number",
-    phonePlaceholder: "01xxxxxxxxx",
-    confirmPassword: "Confirm Password",
-    confirmPasswordPlaceholder: "••••••••",
-    createAccountButton: "Create Account",
-    loginButton: "Login",
-    createAccountSuccess: "Account Created Successfully",
-    createAccountSuccessDesc: "Your account is ready. Redirecting you to your profile...",
-    loginSuccess: "Logged In Successfully",
-    loginSuccessDesc: "Welcome back! Redirecting you...",
-    passwordsDontMatch: "Passwords do not match.",
+    pageTitle: "Access Your Account",
+    pageDescription: "Sign in with your Google account to manage your appointments and preferences.",
+    signInWithGoogleButton: "Sign in with Google",
+    signInSuccess: "Signed In Successfully",
+    signInSuccessDesc: "Welcome! Redirecting you...",
     genericError: "An unexpected error occurred. Please try again.",
     authError: "Authentication Error",
-    loginError: "Login Error",
-    phoneInUseError: "This phone number seems to be associated with an existing account. Please try logging in.",
-    weakPassword: "Password is too weak. It should be at least 6 characters.",
-    userNotFound: "No user found with this phone number. Please check your number or create an account.",
-    wrongPassword: "Incorrect password. Please try again.",
-    nameMin: "Name must be at least 2 characters.",
-    nameMax: "Name must be at most 50 characters.",
-    ageMin: "Age must be a positive number.",
-    ageMax: "Age seems too high.",
-    phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
-    phoneRequired: "Phone number is required.",
-    configurationNotFound: "Firebase auth configuration not found. Please ensure sign-in methods are enabled in Firebase console.",
-    firestoreError: "Database Error",
-    firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem. Please check your Firestore security rules.",
+    popupClosedError: "Sign-in process was cancelled. Please try again if this was unintentional.",
     checkingAuth: "Checking authentication status...",
     alreadyLoggedIn: "You are already logged in. Redirecting to profile...",
-    forgotPassword: "Forgot Password?",
-    forgotPasswordTitle: "Reset Your Password",
-    forgotPasswordDescription: "Enter your registered phone number to receive password reset instructions.",
-    sendResetInstructions: "Send Reset Instructions",
-    cancel: "Cancel",
-    passwordResetInitiatedTitle: "Password Reset Initiated",
-    passwordResetInitiatedDesc: "Account found and password reset process initiated. You will not receive a reset email due to the phone-based setup. Please contact support with your phone number to complete the password reset.",
-    passwordResetError: "Password Reset Error",
-    passwordResetPhoneNotFound: "No account found with this phone number. Please check the number or create an account.",
-    passwordResetFailed: "Failed to initiate password reset. Please try again later.",
-    forgotPasswordContactSupportPrefix: "If you forgot your password, please contact ",
-    technicalSupportLinkText: "technical support",
+    technicalSupport: "Technical Support",
+    contactSupportMessage: "If you encounter any issues, please contact our ",
   },
   ar: {
-    pageTitle: "الوصول إلى الحساب",
-    pageDescription: "أنشئ حسابًا جديدًا أو سجل الدخول لإدارة مواعيدك وتفضيلاتك.",
-    createAccountTab: "إنشاء حساب",
-    loginTab: "تسجيل الدخول",
-    createAccountCardTitle: "أدخل بياناتك",
-    loginCardTitle: "أهلاً بعودتك",
-    loginCardDescription: "أدخل بيانات اعتمادك للوصول إلى حسابك.",
-    password: "كلمة المرور",
-    passwordPlaceholder: "••••••••",
-    name: "الاسم الكامل",
-    namePlaceholder: "مثال: جون دو",
-    imageUrl: "رابط الصورة (اختياري)",
-    imageUrlPlaceholder: "https://example.com/your-image.png",
-    imageUrlDesc: "رابط لصورة ملفك الشخصي.",
-    age: "العمر (اختياري)",
-    agePlaceholder: "مثال: 30",
-    phone: "رقم الهاتف",
-    phonePlaceholder: "01xxxxxxxxx",
-    confirmPassword: "تأكيد كلمة المرور",
-    confirmPasswordPlaceholder: "••••••••",
-    createAccountButton: "إنشاء حساب",
-    loginButton: "تسجيل الدخول",
-    createAccountSuccess: "تم إنشاء الحساب بنجاح",
-    createAccountSuccessDesc: "حسابك جاهز. يتم توجيهك إلى ملفك الشخصي...",
-    loginSuccess: "تم تسجيل الدخول بنجاح",
-    loginSuccessDesc: "أهلاً بعودتك! يتم توجيهك...",
-    passwordsDontMatch: "كلمتا المرور غير متطابقتين.",
+    pageTitle: "الوصول إلى حسابك",
+    pageDescription: "سجل الدخول باستخدام حساب جوجل الخاص بك لإدارة مواعيدك وتفضيلاتك.",
+    signInWithGoogleButton: "تسجيل الدخول باستخدام جوجل",
+    signInSuccess: "تم تسجيل الدخول بنجاح",
+    signInSuccessDesc: "أهلاً بك! يتم توجيهك...",
     genericError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
     authError: "خطأ في المصادقة",
-    loginError: "خطأ في تسجيل الدخول",
-    phoneInUseError: "يبدو أن رقم الهاتف هذا مرتبط بحساب موجود. يرجى محاولة تسجيل الدخول.",
-    weakPassword: "كلمة المرور ضعيفة جداً. يجب أن تتكون من 6 أحرف على الأقل.",
-    userNotFound: "لم يتم العثور على مستخدم برقم الهاتف هذا. يرجى التحقق من رقمك أو إنشاء حساب.",
-    wrongPassword: "كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
-    nameMin: "يجب أن يتكون الاسم من حرفين على الأقل.",
-    nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
-    ageMin: "يجب أن يكون العمر رقمًا موجبًا.",
-    ageMax: "العمر يبدو كبيرًا جدًا.",
-    phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
-    phoneRequired: "رقم الهاتف مطلوب.",
-    configurationNotFound: "لم يتم العثور على تكوين المصادقة في Firebase. يرجى التأكد من تفعيل أساليب تسجيل الدخول في لوحة تحكم Firebase.",
-    firestoreError: "خطأ في قاعدة البيانات",
-    firestorePermissionsError: "تعذر حفظ معلومات ملفك الشخصي بسبب مشكلات في أذونات قاعدة البيانات. هذه مشكلة في إعدادات الخادم. يرجى التحقق من قواعد الأمان في Firestore.",
+    popupClosedError: "تم إلغاء عملية تسجيل الدخول. يرجى المحاولة مرة أخرى إذا كان هذا غير مقصود.",
     checkingAuth: "جارٍ التحقق من حالة المصادقة...",
     alreadyLoggedIn: "أنت مسجل الدخول بالفعل. يتم توجيهك إلى الملف الشخصي...",
-    forgotPassword: "هل نسيت كلمة المرور؟",
-    forgotPasswordTitle: "إعادة تعيين كلمة المرور",
-    forgotPasswordDescription: "أدخل رقم هاتفك المسجل لتلقي تعليمات إعادة تعيين كلمة المرور.",
-    sendResetInstructions: "إرسال التعليمات",
-    cancel: "إلغاء",
-    passwordResetInitiatedTitle: "بدء إعادة تعيين كلمة المرور",
-    passwordResetInitiatedDesc: "تم العثور على الحساب وبدء عملية إعادة تعيين كلمة المرور. لن تتلقى بريدًا إلكترونيًا لإعادة التعيين بسبب الإعداد المعتمد على رقم الهاتف. يرجى الاتصال بالدعم مع ذكر رقم هاتفك لإكمال إعادة تعيين كلمة المرور.",
-    passwordResetError: "خطأ في إعادة تعيين كلمة المرور",
-    passwordResetPhoneNotFound: "لم يتم العثور على حساب برقم الهاتف هذا. يرجى التحقق من الرقم أو إنشاء حساب.",
-    passwordResetFailed: "فشل بدء إعادة تعيين كلمة المرور. يرجى المحاولة مرة أخرى لاحقًا.",
-    forgotPasswordContactSupportPrefix: "في حال نسيت كلمة السر، يرجى ",
-    technicalSupportLinkText: "التحدث مع الدعم الفني",
+    technicalSupport: "الدعم الفني",
+    contactSupportMessage: "في حال واجهتك أي مشاكل، يرجى التواصل مع ",
   },
-};
-
-const generateDummyEmailFromPhone = (phone: string) => {
-  const sanitizedPhone = phone.startsWith('+') ? phone.substring(1) : phone;
-  return `user-${sanitizedPhone.replace(/\D/g, '')}@auth.local`;
 };
 
 
@@ -172,8 +69,7 @@ export default function AuthPage() {
   const locale = params.locale as Locale;
   const { toast } = useToast();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [isForgotPasswordAlertOpen, setIsForgotPasswordAlertOpen] = useState(false);
-
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const t = translations[locale] || translations.en;
   const salonInfoData = getSalonInfo(locale);
@@ -181,6 +77,17 @@ export default function AuthPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
+        // Ensure user data is in Firestore, especially if they are returning
+        // This might be redundant if signInWithGoogle always upserts, but good for robustness
+        if (user.email) { // Google users always have an email
+            upsertUserData(user.uid, {
+                name: user.displayName,
+                email: user.email,
+                imageUrl: user.photoURL,
+                isAnonymous: false,
+                phoneNumber: user.phoneNumber || null,
+            }).catch(err => console.error("Error ensuring user data on auth state change:", err));
+        }
         toast({ title: t.alreadyLoggedIn });
         router.push(`/${locale}/profile`);
       } else {
@@ -192,161 +99,33 @@ export default function AuthPage() {
   }, [router, locale, toast]);
 
 
-  const createAccountFormSchema = z.object({
-    name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
-    imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')),
-    age: z.preprocess(
-      (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
-      z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
-    ),
-    phone: z.string()
-      .min(1, { message: t.phoneRequired })
-      .regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
-    password: z.string().min(6, { message: t.weakPassword }),
-    confirmPassword: z.string(),
-  }).refine(data => data.password === data.confirmPassword, {
-    message: t.passwordsDontMatch,
-    path: ["confirmPassword"],
-  });
-  type CreateAccountFormValues = z.infer<typeof createAccountFormSchema>;
-
-  const loginFormSchema = z.object({
-    phone: z.string().min(1, {message: t.phoneRequired}).regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
-    password: z.string().min(1, { message: t.passwordPlaceholder }),
-  });
-  type LoginFormValues = z.infer<typeof loginFormSchema>;
-
-  const forgotPasswordFormSchema = z.object({
-    phone: z.string().min(1, {message: t.phoneRequired}).regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
-  });
-  type ForgotPasswordFormValues = z.infer<typeof forgotPasswordFormSchema>;
-
-
-  const createAccountForm = useForm<CreateAccountFormValues>({
-    resolver: zodResolver(createAccountFormSchema),
-    defaultValues: {
-      name: "",
-      imageUrl: "",
-      age: undefined,
-      phone: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
-
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
-    defaultValues: {
-      phone: "",
-      password: "",
-    },
-  });
-
-  const forgotPasswordForm = useForm<ForgotPasswordFormValues>({
-    resolver: zodResolver(forgotPasswordFormSchema),
-    defaultValues: { phone: "" },
-  });
-
-
-  const handleAuthError = (error: AuthError | Error, context: 'create' | 'login' | 'forgotPassword') => {
-    console.error(`${context} Error:`, error);
-    let title = t.genericError;
+  const handleAuthError = (error: AuthError | Error) => {
+    console.error(`Google Sign-In Error:`, error);
+    let title = t.authError;
     let description = t.genericError;
 
-    if (context === 'create') title = t.authError;
-    if (context === 'login') title = t.loginError;
-    if (context === 'forgotPassword') title = t.passwordResetError;
-
-
-    if ('code' in error && typeof (error as AuthError).code === 'string') {
-      const authError = error as AuthError;
-      switch (authError.code) {
-        case 'auth/email-already-in-use': 
-          description = t.phoneInUseError;
-          if (context === 'create') createAccountForm.setError("phone", { type: "manual", message: description });
-          break;
-        case 'auth/weak-password':
-          description = t.weakPassword;
-          if (context === 'create') createAccountForm.setError("password", { type: "manual", message: t.weakPassword });
-          break;
-        case 'auth/user-not-found': 
-          description = t.userNotFound;
-          if (context === 'login') loginForm.setError("phone", { type: "manual", message: t.userNotFound });
-          if (context === 'forgotPassword') forgotPasswordForm.setError("phone", {type: "manual", message: t.passwordResetPhoneNotFound});
-          break;
-        case 'auth/wrong-password':
-          description = t.wrongPassword;
-          if (context === 'login') loginForm.setError("password", { type: "manual", message: t.wrongPassword });
-          break;
-        case 'auth/configuration-not-found':
-           description = t.configurationNotFound;
-           break;
-        default:
-          if (authError.message) {
-            description = authError.message;
-          }
-      }
-    } else if (error.message && (error.message.includes('Firestore: Missing or insufficient permissions') || error.message.includes('permission-denied'))) {
-      title = t.firestoreError;
-      description = t.firestorePermissionsError;
+    if (error.message.includes("Sign-in popup closed by user") || (error as AuthError).code === 'auth/popup-closed-by-user') {
+        description = t.popupClosedError;
+    } else if ((error as AuthError).code) {
+        const authError = error as AuthError;
+        // Handle other specific Firebase auth errors if needed
+        description = authError.message || t.genericError;
     } else if (error.message) {
         description = error.message;
     }
-
     toast({ variant: "destructive", title, description });
   };
 
-  async function onCreateAccountSubmit(values: CreateAccountFormValues) {
+  async function handleGoogleSignIn() {
+    setIsSigningIn(true);
     try {
-      const dummyEmail = generateDummyEmailFromPhone(values.phone);
-      const userCredential = await createUserWithEmailAndPassword(auth, dummyEmail, values.password);
-      const user = userCredential.user;
-      await upsertUserData(user.uid, {
-        email: dummyEmail,
-        name: values.name,
-        imageUrl: values.imageUrl || null,
-        age: values.age !== undefined ? Number(values.age) : null,
-        phoneNumber: values.phone,
-        isAnonymous: false,
-      });
-      toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
+      await signInWithGoogle(); // signInWithGoogle now handles upsertUserData
+      toast({ title: t.signInSuccess, description: t.signInSuccessDesc });
       router.push(`/${locale}/profile`);
     } catch (error) {
-      handleAuthError(error as AuthError | Error, 'create');
-    }
-  }
-
-  async function onLoginSubmit(values: LoginFormValues) {
-    try {
-      const dummyEmail = generateDummyEmailFromPhone(values.phone);
-      const userCredential = await signInWithEmailAndPassword(auth, dummyEmail, values.password);
-      await upsertUserData(userCredential.user.uid, { email: dummyEmail, phoneNumber: values.phone });
-      toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
-      router.push(`/${locale}/profile`);
-    } catch (error) {
-      handleAuthError(error as AuthError | Error, 'login');
-    }
-  }
-
-  async function onForgotPasswordSubmit(values: ForgotPasswordFormValues) {
-    try {
-      const userData = await findUserByPhoneNumber(values.phone);
-      if (userData && userData.email) {
-        await firebaseSendPasswordResetEmail(auth, userData.email);
-        toast({
-          title: t.passwordResetInitiatedTitle,
-          description: t.passwordResetInitiatedDesc,
-          duration: 10000, // Keep toast longer for this message
-        });
-        setIsForgotPasswordAlertOpen(false);
-        forgotPasswordForm.reset();
-      } else {
-        forgotPasswordForm.setError("phone", { type: "manual", message: t.passwordResetPhoneNotFound });
-        toast({ variant: "destructive", title: t.passwordResetError, description: t.passwordResetPhoneNotFound });
-      }
-    } catch (error) {
-      console.error("Forgot password error:", error);
-      handleAuthError(error as AuthError | Error, 'forgotPassword');
+      handleAuthError(error as AuthError | Error);
+    } finally {
+      setIsSigningIn(false);
     }
   }
 
@@ -372,174 +151,35 @@ export default function AuthPage() {
       <h1 className="text-3xl font-bold mb-2 text-center font-headline">{t.pageTitle}</h1>
       <p className="text-muted-foreground mb-8 text-center max-w-md">{t.pageDescription}</p>
 
-      <Tabs defaultValue="create-account" className="w-full max-w-md">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="create-account" className="py-3">
-            <UserPlus className="me-2 h-5 w-5" /> {t.createAccountTab}
-          </TabsTrigger>
-          <TabsTrigger value="login" className="py-3">
-            <LogIn className="me-2 h-5 w-5" /> {t.loginTab}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="create-account">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">{t.createAccountCardTitle}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Form {...createAccountForm}>
-                <form onSubmit={createAccountForm.handleSubmit(onCreateAccountSubmit)} className="space-y-4">
-                  <FormField
-                    control={createAccountForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><UserCircle className="me-2 h-4 w-4 text-muted-foreground" />{t.name}</FormLabel>
-                        <FormControl>
-                          <Input placeholder={t.namePlaceholder} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createAccountForm.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.imageUrl}</FormLabel>
-                        <FormControl>
-                          <Input type="url" placeholder={t.imageUrlPlaceholder} {...field} />
-                        </FormControl>
-                        <FormDescription>{t.imageUrlDesc}</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createAccountForm.control}
-                    name="age"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><CalendarDays className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
-                        <FormControl>
-                           <Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={createAccountForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phone}</FormLabel>
-                        <FormControl>
-                          <Input type="tel" placeholder={t.phonePlaceholder} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createAccountForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><Lock className="me-2 h-4 w-4 text-muted-foreground" />{t.password}</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder={t.passwordPlaceholder} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createAccountForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><ShieldCheck className="me-2 h-4 w-4 text-muted-foreground" />{t.confirmPassword}</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder={t.confirmPasswordPlaceholder} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-6" disabled={createAccountForm.formState.isSubmitting}>
-                    {createAccountForm.formState.isSubmitting ? <LoadingSpinner className="me-2" /> : <UserPlus className="me-2 h-4 w-4" />}
-                    {t.createAccountButton}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="login">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">{t.loginCardTitle}</CardTitle>
-              <CardDescription>{t.loginCardDescription}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                  <FormField
-                    control={loginForm.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phone}</FormLabel>
-                        <FormControl>
-                          <Input type="tel" placeholder={t.phonePlaceholder} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center"><Lock className="me-2 h-4 w-4 text-muted-foreground" />{t.password}</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder={t.passwordPlaceholder} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-6" disabled={loginForm.formState.isSubmitting}>
-                    {loginForm.formState.isSubmitting ? <LoadingSpinner className="me-2" /> : <LogIn className="me-2 h-4 w-4" />}
-                    {t.loginButton}
-                  </Button>
-                </form>
-              </Form>
-               <p className="mt-6 text-center text-sm text-muted-foreground">
-                {t.forgotPasswordContactSupportPrefix}
-                <a
-                  href={salonInfoData.whatsappLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-accent hover:text-accent/80 underline"
-                >
-                  {t.technicalSupportLinkText}
-                </a>
-                {locale === 'en' ? '.' : ''}
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="font-headline text-center">{t.signInWithGoogleButton}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center">
+          <Button 
+            onClick={handleGoogleSignIn} 
+            className="w-full bg-primary hover:bg-primary/90 mt-4" 
+            disabled={isSigningIn}
+            variant="default"
+            size="lg"
+          >
+            {isSigningIn ? <LoadingSpinner className="me-2" /> : <GoogleIcon />}
+            {t.signInWithGoogleButton}
+          </Button>
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            {t.contactSupportMessage}
+            <a
+              href={salonInfoData.whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-accent hover:text-accent/80 underline"
+            >
+              {t.technicalSupport}
+            </a>
+            {locale === 'en' ? '.' : ''}
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-    
-
-    

@@ -10,14 +10,14 @@ import * as z from "zod";
 
 import { auth, db, upsertUserData } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged, updatePassword, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth'; // Removed updatePassword
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Removed CardFooter
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff, Image as ImageIcon, CalendarDays, X, LogOut } from 'lucide-react';
+import { UserCircle, Cake, Phone, Save, Edit3, Image as ImageIcon, CalendarDays, X, LogOut, Mail } from 'lucide-react'; // Removed ShieldCheck, Eye, EyeOff
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -36,10 +36,11 @@ const translations = {
     personalInfo: "Personal Information",
     name: "Full Name",
     namePlaceholder: "e.g., John Doe",
+    email: "Email Address",
     age: "Age",
     agePlaceholder: "e.g., 30",
     phoneNumber: "Phone Number",
-    phonePlaceholder: "01xxxxxxxxx",
+    phonePlaceholder: "01xxxxxxxxx (Optional)",
     profilePicture: "Profile Picture",
     imageUrl: "Image URL (Optional)",
     imageUrlPlaceholder: "https://example.com/your-image.png",
@@ -47,19 +48,10 @@ const translations = {
     noName: "Not Provided",
     noAge: "Not Provided",
     noPhoneNumber: "Not Provided",
-    passwordSettings: "Password Settings",
-    passwordSettingsDesc: "Change your password.",
-    newPassword: "New Password",
-    confirmNewPassword: "Confirm New Password",
-    updatePasswordButton: "Update Password",
-    passwordUpdatedSuccess: "Password Updated Successfully",
-    passwordUpdatedError: "Failed to Update Password",
-    passwordsDontMatch: "New passwords do not match.",
-    passwordMinLength: "New password must be at least 6 characters.",
+    noEmail: "Not Provided",
     loading: "Loading profile...",
     errorFetchingProfile: "Could not load profile data.",
-    userNotAuthenticated: "User not authenticated. Redirecting to login...",
-    tooManyRequests: "Too many recent attempts. Please try again later.",
+    userNotAuthenticated: "User not authenticated. Redirecting...",
     editProfile: "Edit Profile",
     saveChanges: "Save Changes",
     cancel: "Cancel",
@@ -69,12 +61,13 @@ const translations = {
     nameMax: "Name must be at most 50 characters.",
     ageMin: "Age must be a positive number.",
     ageMax: "Age seems too high.",
-    phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
-    phoneRequired: "Phone number is required.",
+    phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015 if provided.",
+    // phoneRequired: "Phone number is required.", // Phone is now optional
     genericError: "An unexpected error occurred. Please try again.",
     logoutButton: "Log Out",
     logoutSuccess: "Logged Out Successfully",
     logoutError: "Failed to Log Out",
+    emailNonEditable: "Your email is linked to your Google account and cannot be changed here.",
   },
   ar: {
     pageTitle: "ملفك الشخصي",
@@ -82,10 +75,11 @@ const translations = {
     personalInfo: "المعلومات الشخصية",
     name: "الاسم الكامل",
     namePlaceholder: "مثال: جون دو",
+    email: "البريد الإلكتروني",
     age: "العمر",
     agePlaceholder: "مثال: 30",
     phoneNumber: "رقم الهاتف",
-    phonePlaceholder: "01xxxxxxxxx",
+    phonePlaceholder: "01xxxxxxxxx (اختياري)",
     profilePicture: "الصورة الشخصية",
     imageUrl: "رابط الصورة (اختياري)",
     imageUrlPlaceholder: "https://example.com/your-image.png",
@@ -93,19 +87,10 @@ const translations = {
     noName: "غير متوفر",
     noAge: "غير متوفر",
     noPhoneNumber: "غير متوفر",
-    passwordSettings: "إعدادات كلمة المرور",
-    passwordSettingsDesc: "قم بتغيير كلمة المرور الخاصة بك.",
-    newPassword: "كلمة المرور الجديدة",
-    confirmNewPassword: "تأكيد كلمة المرور الجديدة",
-    updatePasswordButton: "تحديث كلمة المرور",
-    passwordUpdatedSuccess: "تم تحديث كلمة المرور بنجاح",
-    passwordUpdatedError: "فشل تحديث كلمة المرور",
-    passwordsDontMatch: "كلمات المرور الجديدة غير متطابقة.",
-    passwordMinLength: "يجب أن تتكون كلمة المرور الجديدة من 6 أحرف على الأقل.",
+    noEmail: "غير متوفر",
     loading: "جارٍ تحميل الملف الشخصي...",
     errorFetchingProfile: "تعذر تحميل بيانات الملف الشخصي.",
-    userNotAuthenticated: "المستخدم غير مصادق عليه. يتم التوجيه إلى صفحة تسجيل الدخول...",
-    tooManyRequests: "محاولات كثيرة مؤخرًا. يرجى المحاولة مرة أخرى لاحقًا.",
+    userNotAuthenticated: "المستخدم غير مصادق عليه. يتم التوجيه...",
     editProfile: "تعديل البيانات",
     saveChanges: "حفظ التغييرات",
     cancel: "إلغاء",
@@ -115,12 +100,13 @@ const translations = {
     nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
     ageMin: "يجب أن يكون العمر رقمًا موجبًا.",
     ageMax: "العمر يبدو كبيرًا جدًا.",
-    phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
-    phoneRequired: "رقم الهاتف مطلوب.",
+    phoneInvalidPrefixOrLength: "إذا تم توفيره، يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
+    // phoneRequired: "رقم الهاتف مطلوب.",
     genericError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
     logoutButton: "تسجيل الخروج",
     logoutSuccess: "تم تسجيل الخروج بنجاح",
     logoutError: "فشل تسجيل الخروج",
+    emailNonEditable: "بريدك الإلكتروني مرتبط بحساب جوجل الخاص بك ولا يمكن تغييره هنا.",
   }
 };
 
@@ -136,21 +122,20 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const t = translations[locale] || translations.en;
 
   const editProfileFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
+    email: z.string().email().optional(), // Email will be read-only, but schema needs it
     imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')),
     age: z.preprocess(
       (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
       z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
     ),
     phoneNumber: z.string()
-      .min(1, { message: t.phoneRequired })
-      .regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
+      .optional()
+      .or(z.literal(''))
+      .refine(val => !val || /^(010|011|012|015)\d{8}$/.test(val), { message: t.phoneInvalidPrefixOrLength }),
   });
   type EditProfileFormValues = z.infer<typeof editProfileFormSchema>;
 
@@ -158,24 +143,11 @@ export default function ProfilePage() {
     resolver: zodResolver(editProfileFormSchema),
     defaultValues: {
       name: "",
+      email: "",
       imageUrl: "",
       age: undefined,
       phoneNumber: "",
     },
-  });
-
-  const passwordFormSchema = z.object({
-    newPassword: z.string().min(6, { message: t.passwordMinLength }),
-    confirmPassword: z.string(),
-  }).refine(data => data.newPassword === data.confirmPassword, {
-    message: t.passwordsDontMatch,
-    path: ["confirmPassword"],
-  });
-  type PasswordFormValues = z.infer<typeof passwordFormSchema>;
-
-  const passwordForm = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordFormSchema),
-    defaultValues: { newPassword: '', confirmPassword: '' },
   });
   
   useEffect(() => {
@@ -185,27 +157,36 @@ export default function ProfilePage() {
         try {
           const userDocRef = doc(db, "users", user.uid);
           const docSnap = await getDoc(userDocRef);
+          let fetchedData: UserProfileData;
+
           if (docSnap.exists()) {
-            const fetchedData = docSnap.data() as UserProfileData;
-            setUserProfile(fetchedData);
-            editProfileForm.reset({
-              name: fetchedData.name || "",
-              imageUrl: fetchedData.imageUrl || "",
-              age: fetchedData.age === null ? undefined : fetchedData.age,
-              phoneNumber: fetchedData.phoneNumber || "",
-            });
+            fetchedData = docSnap.data() as UserProfileData;
           } else {
-             setUserProfile({ 
+            // If no data in Firestore, use data from Google Auth user object
+            // This can happen if user signed up but Firestore write failed or is delayed
+            fetchedData = { 
                 name: user.displayName, 
-                email: null,
+                email: user.email,
                 imageUrl: user.photoURL, 
                 age: null, 
-                phoneNumber: user.phoneNumber 
-            });
+                phoneNumber: user.phoneNumber || null,
+            };
+             // Attempt to save this initial data to Firestore
+            await upsertUserData(user.uid, fetchedData);
           }
+          setUserProfile(fetchedData);
+          editProfileForm.reset({
+            name: fetchedData.name || user.displayName || "",
+            email: fetchedData.email || user.email || "", // Email for display
+            imageUrl: fetchedData.imageUrl || user.photoURL || "",
+            age: fetchedData.age === null ? undefined : fetchedData.age,
+            phoneNumber: fetchedData.phoneNumber || "",
+          });
+
         } catch (e) {
-          console.error("Error fetching user profile:", e);
+          console.error("Error fetching/setting user profile:", e);
           setError(t.errorFetchingProfile);
+          toast({ variant: "destructive", title: t.errorFetchingProfile, description: e instanceof Error ? e.message : String(e) });
         }
       } else {
         toast({ title: t.userNotAuthenticated, variant: "destructive" });
@@ -218,38 +199,21 @@ export default function ProfilePage() {
   }, [router, locale, t, editProfileForm]);
 
 
-  const handlePasswordUpdate = async (values: PasswordFormValues) => {
-    if (!currentUser) { 
-      toast({ title: t.passwordUpdatedError, description: "User not properly authenticated.", variant: "destructive" });
-      return;
-    }
-    try {
-      await updatePassword(currentUser, values.newPassword);
-      toast({ title: t.passwordUpdatedSuccess });
-      passwordForm.reset();
-    } catch (err: any) {
-      console.error("Password update error:", err);
-      let description = t.passwordUpdatedError;
-      if (err.code === 'auth/too-many-requests') {
-        description = t.tooManyRequests;
-      } else if (err.code === 'auth/weak-password') {
-        description = t.passwordMinLength;
-         passwordForm.setError("newPassword", { type: "manual", message: description });
-      }
-      toast({ title: t.passwordUpdatedError, description, variant: "destructive" });
-    }
-  };
-
   const handleEditProfileSubmit = async (values: EditProfileFormValues) => {
-    if (!currentUser) return;
+    if (!currentUser || !userProfile) return;
     try {
-      await upsertUserData(currentUser.uid, {
+      // Email is not updated from here as it's tied to Google Auth
+      const dataToUpdate: Partial<UserProfileData> = {
         name: values.name,
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
-        phoneNumber: values.phoneNumber,
-      });
-      setUserProfile(prev => prev ? { ...prev, ...values, age: values.age !== undefined ? Number(values.age) : null } : null);
+        phoneNumber: values.phoneNumber || null,
+        email: userProfile.email, // Keep existing email from auth/profile
+      };
+
+      await upsertUserData(currentUser.uid, dataToUpdate);
+      
+      setUserProfile(prev => prev ? { ...prev, ...dataToUpdate } : null);
       toast({ title: t.profileUpdatedSuccess });
       setIsEditing(false);
     } catch (error) {
@@ -277,196 +241,161 @@ export default function ProfilePage() {
       </div>
     );
   }
-  if (error) {
+  if (error && !userProfile) { // Only show full error if profile truly fails to load
     return (
       <div className="container mx-auto py-12 px-4 text-center text-destructive">
         <p>{error}</p>
         <Button onClick={() => router.push(`/${locale}/auth`)} className="mt-4">
-          {locale === 'ar' ? 'العودة لإنشاء حساب' : 'Back to Create Account'}
+          {locale === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to Sign In'}
         </Button>
       </div>
     );
   }
   if (!currentUser || !userProfile) {
+     // This case should ideally be caught by the onAuthStateChanged redirect
     return (<div className="container mx-auto py-12 px-4 text-center"><p>{t.userNotAuthenticated}</p></div>);
   }
 
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="text-center mb-10">
-        <UserCircle className="h-16 w-16 text-primary mx-auto mb-4" />
-        <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary mb-3">{t.pageTitle}</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t.pageDescription}</p>
+        {userProfile.imageUrl ? (
+            <Image
+              src={userProfile.imageUrl} alt={t.profilePicture} width={128} height={128}
+              className="rounded-full object-cover border-4 border-accent mx-auto mb-4"
+              data-ai-hint="user profile picture"
+              onError={(e: FormEvent<HTMLImageElement>) => {
+                (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png';
+                (e.target as HTMLImageElement).alt = 'Placeholder User Image';
+              }}
+            />
+        ) : (
+            <UserCircle className="h-32 w-32 text-primary mx-auto mb-4" />
+        )}
+        <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary mb-3">{userProfile.name || t.noName}</h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{userProfile.email || t.noEmail}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-1">
-          <Card className="shadow-lg">
-            <CardHeader className="items-center">
-              {!isEditing && userProfile.imageUrl ? (
-                <Image
-                  src={userProfile.imageUrl} alt={t.profilePicture} width={128} height={128}
-                  className="rounded-full object-cover border-4 border-accent"
-                  data-ai-hint="user profile picture"
-                  onError={(e: FormEvent<HTMLImageElement>) => {
-                    (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png';
-                    (e.target as HTMLImageElement).alt = 'Placeholder User Image';
-                  }}
-                />
-              ) : !isEditing && (
-                <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center border-4 border-accent">
-                  <UserCircle className="h-24 w-24 text-muted-foreground" />
-                </div>
-              )}
-              {!isEditing && <CardTitle className="font-headline text-2xl mt-4">{userProfile.name || t.noName}</CardTitle>}
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {isEditing ? (
-                <Form {...editProfileForm}>
-                  <form onSubmit={editProfileForm.handleSubmit(handleEditProfileSubmit)} className="space-y-4">
-                    <FormField
-                      control={editProfileForm.control} name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><UserCircle className="me-2 h-4 w-4 text-muted-foreground" />{t.name}</FormLabel>
-                          <FormControl><Input placeholder={t.namePlaceholder} {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={editProfileForm.control} name="imageUrl"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.imageUrl}</FormLabel>
-                          <FormControl><Input type="url" placeholder={t.imageUrlPlaceholder} {...field} /></FormControl>
-                          <FormDescription>{t.imageUrlDesc}</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={editProfileForm.control} name="age"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><CalendarDays className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
-                          <FormControl><Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={editProfileForm.control} name="phoneNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phoneNumber}</FormLabel>
-                          <FormControl><Input type="tel" placeholder={t.phonePlaceholder} {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex gap-2 pt-2">
-                      <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" disabled={editProfileForm.formState.isSubmitting}>
-                        {editProfileForm.formState.isSubmitting ? <LoadingSpinner size={20} className="me-2"/> : <Save className="h-5 w-5 me-2" /> }
-                        {t.saveChanges}
-                      </Button>
-                      <Button type="button" variant="outline" className="flex-1" onClick={() => {
-                        setIsEditing(false);
-                        editProfileForm.reset({
-                            name: userProfile.name || "",
-                            imageUrl: userProfile.imageUrl || "",
-                            age: userProfile.age === null ? undefined : userProfile.age,
-                            phoneNumber: userProfile.phoneNumber || "",
-                        });
-                      }}>
-                        <X className="h-5 w-5 me-2" />{t.cancel}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              ) : (
-                <>
-                  <div className="flex items-center text-muted-foreground">
-                    <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
-                    <span>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
-                  </div>
-                  <div className="flex items-center text-muted-foreground">
-                    <Phone className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
-                    <span>{userProfile.phoneNumber || t.noPhoneNumber}</span>
-                  </div>
-                  <Button onClick={() => setIsEditing(true)} className="w-full mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
-                    <Edit3 className="h-5 w-5 me-2" />{t.editProfile}
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="md:col-span-2">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl flex items-center">
-                <ShieldCheck className={`h-6 w-6 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
-                {t.passwordSettings}
-              </CardTitle>
-              <CardDescription>{t.passwordSettingsDesc}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(handlePasswordUpdate)} className="space-y-6">
-                  <FormField
-                    control={passwordForm.control} name="newPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t.newPassword}</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input type={showNewPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                            <Button type="button" variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
-                              {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={passwordForm.control} name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t.confirmNewPassword}</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                            <Button type="button" variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
-                    <Button type="submit" className="w-full sm:w-auto bg-primary hover:bg-primary/90" disabled={passwordForm.formState.isSubmitting}>
-                      {passwordForm.formState.isSubmitting ? <LoadingSpinner size={20} className="me-2"/> : <Save className="h-5 w-5 me-2" /> }
-                      {t.updatePasswordButton}
+      <Card className="shadow-lg max-w-2xl mx-auto">
+        <CardHeader>
+            <div className="flex justify-between items-center">
+                <CardTitle className="font-headline text-2xl">{t.personalInfo}</CardTitle>
+                {!isEditing && (
+                    <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                        <Edit3 className="h-4 w-4 me-2" />{t.editProfile}
                     </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
+                )}
+            </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isEditing ? (
+            <Form {...editProfileForm}>
+              <form onSubmit={editProfileForm.handleSubmit(handleEditProfileSubmit)} className="space-y-6">
+                <FormField
+                  control={editProfileForm.control} name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><UserCircle className="me-2 h-4 w-4 text-muted-foreground" />{t.name}</FormLabel>
+                      <FormControl><Input placeholder={t.namePlaceholder} {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={editProfileForm.control} name="email" 
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><Mail className="me-2 h-4 w-4 text-muted-foreground" />{t.email}</FormLabel>
+                      <FormControl><Input placeholder={userProfile.email || t.noEmail} {...field} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
+                      <FormDescription>{t.emailNonEditable}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editProfileForm.control} name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.imageUrl}</FormLabel>
+                      <FormControl><Input type="url" placeholder={t.imageUrlPlaceholder} {...field} /></FormControl>
+                      <FormDescription>{t.imageUrlDesc}</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editProfileForm.control} name="age"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><CalendarDays className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
+                      <FormControl><Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editProfileForm.control} name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phoneNumber}</FormLabel>
+                      <FormControl><Input type="tel" placeholder={t.phonePlaceholder} {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex gap-2 pt-2">
+                  <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" disabled={editProfileForm.formState.isSubmitting}>
+                    {editProfileForm.formState.isSubmitting ? <LoadingSpinner size={20} className="me-2"/> : <Save className="h-5 w-5 me-2" /> }
+                    {t.saveChanges}
+                  </Button>
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => {
+                    setIsEditing(false);
+                    editProfileForm.reset({ // Reset to current profile state
+                        name: userProfile.name || currentUser.displayName || "",
+                        email: userProfile.email || currentUser.email || "",
+                        imageUrl: userProfile.imageUrl || currentUser.photoURL || "",
+                        age: userProfile.age === null ? undefined : userProfile.age,
+                        phoneNumber: userProfile.phoneNumber || "",
+                    });
+                  }}>
+                    <X className="h-5 w-5 me-2" />{t.cancel}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          ) : (
+            <>
+              <div className="flex items-center text-foreground">
+                <UserCircle className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
+                <span className='font-medium'>{t.name}:</span>
+                <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.name || t.noName}</span>
+              </div>
+               <div className="flex items-center text-foreground">
+                <Mail className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
+                 <span className='font-medium'>{t.email}:</span>
+                <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.email || t.noEmail}</span>
+              </div>
+              <div className="flex items-center text-foreground">
+                <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
+                <span className='font-medium'>{t.age}:</span>
+                <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
+              </div>
+              <div className="flex items-center text-foreground">
+                <Phone className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
+                <span className='font-medium'>{t.phoneNumber}:</span>
+                <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.phoneNumber || t.noPhoneNumber}</span>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+      
       <div className="mt-12 text-center">
         <Button 
           variant="destructive" 
           onClick={handleLogout}
           className="w-full max-w-xs mx-auto"
+          disabled={isLoading}
         >
           <LogOut className="h-5 w-5 me-2" />
           {t.logoutButton}
@@ -475,6 +404,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-    
-
-    
