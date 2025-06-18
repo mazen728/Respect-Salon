@@ -44,7 +44,7 @@ const translations = {
     changeProfilePicture: "Change Profile Picture",
     uploadFromGallery: "Upload from Gallery",
     deletePicture: "Delete Picture",
-    imageUrlDesc: "Upload an image from your device's gallery. Max 2MB. (jpeg, png, gif, webp)",
+    imageUrlDesc: "Upload an image from your device's gallery. Max 500KB. (jpeg, png, gif, webp)",
     noName: "Not Provided",
     noAge: "Not Provided",
     noPhoneNumber: "Not Provided",
@@ -77,7 +77,7 @@ const translations = {
     reauthError: "Re-authentication failed. Please check your current password.",
     passwordMin: "Password must be at least 6 characters.",
     confirmPasswordMatch: "Passwords do not match.",
-    fileTooLarge: "File is too large. Max 2MB.",
+    fileTooLarge: "File is too large. Max 500KB.",
     invalidFileType: "Invalid file type. Please select an image (jpeg, png, gif, webp).",
     uploadError: "Error uploading image. Please try again.",
     imageRemoved: "Profile picture removed.",
@@ -96,7 +96,7 @@ const translations = {
     changeProfilePicture: "تغيير الصورة الشخصية",
     uploadFromGallery: "تحميل من المعرض",
     deletePicture: "حذف الصورة",
-    imageUrlDesc: "قم بتحميل صورة من معرض جهازك. الحد الأقصى 2 ميجابايت. (jpeg, png, gif, webp)",
+    imageUrlDesc: "قم بتحميل صورة من معرض جهازك. الحد الأقصى 500 كيلوبايت. (jpeg, png, gif, webp)",
     noName: "غير متوفر",
     noAge: "غير متوفر",
     noPhoneNumber: "غير متوفر",
@@ -129,7 +129,7 @@ const translations = {
     reauthError: "فشلت إعادة المصادقة. يرجى التحقق من كلمة مرورك الحالية.",
     passwordMin: "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.",
     confirmPasswordMatch: "كلمتا المرور الجديدتان غير متطابقتين.",
-    fileTooLarge: "الملف كبير جدًا. الحد الأقصى 2 ميجابايت.",
+    fileTooLarge: "الملف كبير جدًا. الحد الأقصى 500 كيلوبايت.",
     invalidFileType: "نوع الملف غير صالح. الرجاء اختيار صورة (jpeg, png, gif, webp).",
     uploadError: "خطأ في تحميل الصورة. يرجى المحاولة مرة أخرى.",
     imageRemoved: "تمت إزالة الصورة الشخصية.",
@@ -255,7 +255,7 @@ export default function ProfilePage() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { 
+      if (file.size > 0.5 * 1024 * 1024) { // Max 500KB
         toast({ variant: "destructive", title: t.uploadError, description: t.fileTooLarge });
         return;
       }
@@ -290,7 +290,7 @@ export default function ProfilePage() {
         imageUrl: values.imageUrl || null, 
         age: values.age !== undefined ? Number(values.age) : null,
         email: dummyEmail, 
-        phoneNumber: userProfile.phoneNumber,
+        phoneNumber: userProfile.phoneNumber, // Keep the original phone number from userProfile
         isAnonymous: false,
       };
 
@@ -415,7 +415,7 @@ export default function ProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phoneNumber}</FormLabel>
-                      <FormControl><Input type="tel" placeholder={userProfile.phoneNumber || t.phonePlaceholder} {...field} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
+                      <FormControl><Input type="tel" placeholder={userProfile.phoneNumber || t.phonePlaceholder} {...field} value={userProfile.phoneNumber || ""} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
                        <FormDescription>{locale === 'ar' ? 'لا يمكن تغيير رقم الهاتف من هنا لأنه المعرف الرئيسي للحساب.' : 'Phone number cannot be changed as it is the main account identifier.'}</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -462,7 +462,7 @@ export default function ProfilePage() {
                   )}
                    <FormField
                       control={editProfileForm.control} name="imageUrl"
-                      render={({ field }) => <FormMessage />} 
+                      render={() => <FormMessage />} 
                     />
                   <FormDescription>{t.imageUrlDesc}</FormDescription>
                 </FormItem>
