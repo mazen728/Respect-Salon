@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { auth, db, upsertUserData } from '@/lib/firebase';
+import { auth, db, upsertUserData, findUserByPhoneNumber, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, type User as FirebaseUser } from 'firebase/auth';
 
@@ -17,13 +17,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff, Image as ImageIcon, CalendarDays, X } from 'lucide-react';
+import { UserCircle, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff, Image as ImageIcon, CalendarDays, X, MailQuestion } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 interface UserProfileData {
   name: string | null;
-  email: string | null; // Kept in interface for data structure consistency, but not displayed
+  email: string | null; 
   imageUrl: string | null;
   age: number | null;
   phoneNumber: string | null;
@@ -75,6 +87,15 @@ const translations = {
     ageMax: "Age seems too high.",
     phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
     phoneRequired: "Phone number is required.",
+    forgotPasswordLink: "Forgot current password?",
+    forgotPasswordTitle: "Reset Password",
+    forgotPasswordDescription: "If you've forgotten your current password, enter your registered phone number to initiate the reset process.",
+    sendResetInstructions: "Send Reset Instructions",
+    passwordResetInitiated: "Password Reset Initiated",
+    passwordResetInitiatedDesc: "Account found and password reset process initiated. You will not receive a reset email due to the phone-based setup. Please contact support with your phone number to complete the password reset.",
+    phoneNotFoundForReset: "Phone number not found. Please ensure you entered the correct number associated with your account.",
+    passwordResetError: "Password Reset Error",
+    genericError: "An unexpected error occurred. Please try again.",
   },
   ar: {
     pageTitle: "ملفك الشخصي",
@@ -121,6 +142,15 @@ const translations = {
     ageMax: "العمر يبدو كبيرًا جدًا.",
     phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
     phoneRequired: "رقم الهاتف مطلوب.",
+    forgotPasswordLink: "هل نسيت كلمة المرور الحالية؟",
+    forgotPasswordTitle: "إعادة تعيين كلمة المرور",
+    forgotPasswordDescription: "إذا نسيت كلمة مرورك الحالية، أدخل رقم هاتفك المسجل لبدء عملية إعادة التعيين.",
+    sendResetInstructions: "إرسال تعليمات إعادة التعيين",
+    passwordResetInitiated: "بدء عملية إعادة تعيين كلمة المرور",
+    passwordResetInitiatedDesc: "تم العثور على الحساب وبدء عملية إعادة تعيين كلمة المرور. لن تتلقى بريدًا إلكترونيًا لإعادة التعيين بسبب الإعداد المعتمد على رقم الهاتف. يرجى الاتصال بالدعم مع ذكر رقم هاتفك لإكمال إعادة تعيين كلمة المرور.",
+    phoneNotFoundForReset: "رقم الهاتف غير موجود. يرجى التأكد من إدخال الرقم الصحيح المرتبط بحسابك.",
+    passwordResetError: "خطأ في إعادة تعيين كلمة المرور",
+    genericError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
   }
 };
 
@@ -135,6 +165,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isForgotPasswordAlertOpen, setIsForgotPasswordAlertOpen] = useState(false);
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -180,6 +211,26 @@ export default function ProfilePage() {
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   });
 
+  const forgotPasswordFormSchema = z.object({
+    phone: z.string().min(1, { message: t.phoneRequired }).regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
+  });
+  type ForgotPasswordFormValues = z.infer<typeof forgotPasswordFormSchema>;
+
+  const forgotPasswordForm = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordFormSchema),
+    defaultValues: {
+      phone: userProfile?.phoneNumber || "", // Pre-fill if available
+    },
+  });
+  
+  // Effect to prefill forgotPasswordForm phone number when userProfile is loaded
+  useEffect(() => {
+    if (userProfile?.phoneNumber) {
+      forgotPasswordForm.reset({ phone: userProfile.phoneNumber });
+    }
+  }, [userProfile, forgotPasswordForm]);
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -196,9 +247,15 @@ export default function ProfilePage() {
               age: fetchedData.age === null ? undefined : fetchedData.age,
               phoneNumber: fetchedData.phoneNumber || "",
             });
+            // Pre-fill forgot password form phone field
+            if (fetchedData.phoneNumber) {
+              forgotPasswordForm.reset({ phone: fetchedData.phoneNumber });
+            }
           } else {
-            // Fallback if no Firestore document, though upsertUserData should create one
             setUserProfile({ name: user.displayName, email: user.email, imageUrl: user.photoURL, age: null, phoneNumber: user.phoneNumber });
+             if (user.phoneNumber) {
+              forgotPasswordForm.reset({ phone: user.phoneNumber });
+            }
           }
         } catch (e) {
           console.error("Error fetching user profile:", e);
@@ -212,10 +269,11 @@ export default function ProfilePage() {
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, locale, t, editProfileForm]);
+  }, [router, locale, t, editProfileForm, forgotPasswordForm]);
+
 
   const handlePasswordUpdate = async (values: PasswordFormValues) => {
-    if (!currentUser || !userProfile?.email) { // Check userProfile.email as it contains the dummy email needed for re-auth
+    if (!currentUser || !userProfile?.email) { 
       toast({ title: t.passwordUpdatedError, description: "User not properly authenticated or email missing.", variant: "destructive" });
       return;
     }
@@ -246,7 +304,6 @@ export default function ProfilePage() {
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
         phoneNumber: values.phoneNumber,
-        // email is not updated here as it's managed internally
       });
       setUserProfile(prev => prev ? { ...prev, ...values, age: values.age !== undefined ? Number(values.age) : null } : null);
       toast({ title: t.profileUpdatedSuccess });
@@ -256,6 +313,32 @@ export default function ProfilePage() {
       toast({ title: t.profileUpdatedError, description: error instanceof Error ? error.message : String(error), variant: "destructive" });
     }
   };
+
+  const onForgotPasswordSubmit = async (values: ForgotPasswordFormValues) => {
+    try {
+      const userRecord = await findUserByPhoneNumber(values.phone);
+      if (userRecord && userRecord.email) {
+        await firebaseSendPasswordResetEmail(userRecord.email);
+        toast({
+          title: t.passwordResetInitiated,
+          description: t.passwordResetInitiatedDesc,
+          duration: 10000, 
+        });
+        setIsForgotPasswordAlertOpen(false);
+        forgotPasswordForm.reset({ phone: values.phone }); // Keep phone number in form
+      } else {
+        forgotPasswordForm.setError("phone", { type: "manual", message: t.phoneNotFoundForReset });
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+         forgotPasswordForm.setError("phone", { type: "manual", message: t.phoneNotFoundForReset });
+      } else {
+        console.error("Forgot password error:", error);
+        toast({ variant: "destructive", title: t.passwordResetError, description: error.message || t.genericError });
+      }
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -373,7 +456,6 @@ export default function ProfilePage() {
                 </Form>
               ) : (
                 <>
-                  {/* Email display removed */}
                   <div className="flex items-center text-muted-foreground">
                     <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
                     <span>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
@@ -454,10 +536,51 @@ export default function ProfilePage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={passwordForm.formState.isSubmitting}>
-                    {passwordForm.formState.isSubmitting ? <LoadingSpinner size={20} className="me-2"/> : <Save className="h-5 w-5 me-2" /> }
-                    {t.updatePasswordButton}
-                  </Button>
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <Button type="submit" className="w-full sm:w-auto bg-primary hover:bg-primary/90" disabled={passwordForm.formState.isSubmitting}>
+                      {passwordForm.formState.isSubmitting ? <LoadingSpinner size={20} className="me-2"/> : <Save className="h-5 w-5 me-2" /> }
+                      {t.updatePasswordButton}
+                    </Button>
+                    <AlertDialog open={isForgotPasswordAlertOpen} onOpenChange={setIsForgotPasswordAlertOpen}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="link" type="button" className="text-sm text-primary hover:text-primary/80 p-0 h-auto self-center sm:self-end">
+                           <MailQuestion className="me-1 h-4 w-4" /> {t.forgotPasswordLink}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="font-headline">{t.forgotPasswordTitle}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t.forgotPasswordDescription}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <Form {...forgotPasswordForm}>
+                          <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4 py-2">
+                            <FormField
+                              control={forgotPasswordForm.control}
+                              name="phone"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phoneNumber}</FormLabel>
+                                  <FormControl>
+                                    <Input type="tel" placeholder={t.phonePlaceholder} {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                             <AlertDialogFooter className="pt-2">
+                               <AlertDialogCancel type="button" onClick={() => { setIsForgotPasswordAlertOpen(false); forgotPasswordForm.reset({ phone: userProfile?.phoneNumber || "" }); }}>{locale === 'ar' ? 'إلغاء' : 'Cancel'}</AlertDialogCancel>
+                               <AlertDialogAction type="submit" disabled={forgotPasswordForm.formState.isSubmitting}>
+                                 {forgotPasswordForm.formState.isSubmitting ? <LoadingSpinner className="me-2" /> : null}
+                                 {t.sendResetInstructions}
+                               </AlertDialogAction>
+                             </AlertDialogFooter>
+                          </form>
+                        </Form>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </form>
               </Form>
             </CardContent>
@@ -467,4 +590,6 @@ export default function ProfilePage() {
     </div>
   );
 }
+    
+
     
