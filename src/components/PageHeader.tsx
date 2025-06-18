@@ -4,9 +4,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet'; // Added SheetHeader, SheetTitle
-import { Menu, User } from 'lucide-react'; // Changed LogIn, UserPlus to User
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Menu, UserPlus, Home, ListChecks, Users, CalendarDays, UserCircle as ProfileIcon } from 'lucide-react'; // Explicitly alias UserCircle
 import { LanguageSwitcher } from './LanguageSwitcher';
+import type { Locale } from '@/lib/types'; // Import Locale type
 
 interface NavItem {
   href: string;
@@ -14,18 +15,17 @@ interface NavItem {
   icon?: React.ElementType;
 }
 
-// Updated navItems
 const navItems: NavItem[] = [
-  { href: '/', label: { en: 'Home', ar: 'الرئيسية' } },
-  { href: '/services', label: { en: 'Services', ar: 'الخدمات' } },
-  { href: '/barbers', label: { en: 'Barbers', ar: 'الحلاقون' } },
-  { href: '/appointments', label: { en: 'My Appointments', ar: 'مواعيدي' } },
-  { href: '/profile', label: { en: 'Profile', ar: 'الملف الشخصي' } },
-  { href: '/auth', label: { en: 'Account', ar: 'الحساب' }, icon: User }, // New combined auth link
+  { href: '/', label: { en: 'Home', ar: 'الرئيسية' }, icon: Home },
+  { href: '/services', label: { en: 'Services', ar: 'الخدمات' }, icon: ListChecks },
+  { href: '/barbers', label: { en: 'Barbers', ar: 'الحلاقون' }, icon: Users },
+  { href: '/appointments', label: { en: 'My Appointments', ar: 'مواعيدي' }, icon: CalendarDays },
+  { href: '/profile', label: { en: 'Profile', ar: 'الملف الشخصي' }, icon: ProfileIcon }, // Use aliased ProfileIcon
+  { href: '/auth', label: { en: 'Create Account', ar: 'إنشاء حساب' }, icon: UserPlus },
 ];
 
 interface PageHeaderProps {
-  locale: string;
+  locale: Locale; // Use Locale type
 }
 
 export function PageHeader({ locale }: PageHeaderProps) {
@@ -72,7 +72,7 @@ export function PageHeader({ locale }: PageHeaderProps) {
                 </Button>
               </SheetTrigger>
               <SheetContent side={locale === 'ar' ? 'left' : 'right'} className="w-[280px] sm:w-[320px]">
-                <SheetHeader className="border-b pb-3 mb-3 text-start"> {/* Added text-start for LTR/RTL consistency */}
+                <SheetHeader className="border-b pb-3 mb-3 text-start">
                   <SheetTitle className="font-headline text-xl">{sheetTitleText}</SheetTitle>
                 </SheetHeader>
                 <nav className="grid gap-4 text-lg font-medium">
@@ -81,7 +81,7 @@ export function PageHeader({ locale }: PageHeaderProps) {
                        <Image
                         src="https://i.postimg.cc/tgyg008Z/FB-IMG-1749942810921.jpg"
                         alt={locale === 'ar' ? 'شعار صالون رسبيكت' : 'Respect Salon Logo'}
-                        width={24} // Slightly smaller to fit better with title
+                        width={24}
                         height={24}
                         className="object-contain"
                         data-ai-hint="salon logo icon"
@@ -109,3 +109,5 @@ export function PageHeader({ locale }: PageHeaderProps) {
     </header>
   );
 }
+
+    
