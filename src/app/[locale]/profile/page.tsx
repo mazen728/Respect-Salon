@@ -44,9 +44,9 @@ const translations = {
     profilePicture: "Profile Picture",
     changeProfilePicture: "Change Profile Picture",
     uploadFromGallery: "Upload from Gallery",
-    imageUrl: "Image URL (Optional)", // This key is for schema message, description text is updated below
+    imageUrl: "Image URL (Optional)", 
     imageUrlPlaceholder: "https://example.com/your-image.png",
-    imageUrlDesc: "Upload an image from your gallery. Max 2MB. (jpeg, png, gif, webp)", // UPDATED
+    imageUrlDesc: "Upload an image from your device's gallery. Max 2MB. (jpeg, png, gif, webp)",
     noName: "Not Provided",
     noAge: "Not Provided",
     noPhoneNumber: "Not Provided",
@@ -99,9 +99,9 @@ const translations = {
     profilePicture: "الصورة الشخصية",
     changeProfilePicture: "تغيير الصورة الشخصية",
     uploadFromGallery: "تحميل من المعرض",
-    imageUrl: "رابط الصورة (اختياري)", // This key is for schema message, description text is updated below
+    imageUrl: "رابط الصورة (اختياري)",
     imageUrlPlaceholder: "https://example.com/your-image.png",
-    imageUrlDesc: "قم بتحميل صورة من معرض جهازك. الحد الأقصى 2 ميجابايت. (jpeg, png, gif, webp)", // UPDATED
+    imageUrlDesc: "قم بتحميل صورة من معرض جهازك. الحد الأقصى 2 ميجابايت. (jpeg, png, gif, webp)",
     noName: "غير متوفر",
     noAge: "غير متوفر",
     noPhoneNumber: "غير متوفر",
@@ -170,7 +170,6 @@ export default function ProfilePage() {
 
   const editProfileFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
-    // imageUrl is now primarily for Data URLs from upload or empty. It's still a URL.
     imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')),
     age: z.preprocess(
       (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
@@ -216,12 +215,10 @@ export default function ProfilePage() {
 
           if (docSnap.exists()) {
             fetchedData = docSnap.data() as UserProfileData;
-             // Ensure email in fetchedData matches dummy email if user was created with phone
             if (!fetchedData.email || fetchedData.email !== (user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber))) {
                 fetchedData.email = user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber);
             }
           } else {
-            // This case should be rare if auth page always calls upsertUserData on creation
             const derivedPhoneNumber = user.email?.startsWith('user-') && user.email.includes('@auth.local') 
                                       ? user.email.substring(5, user.email.indexOf('@auth.local')) 
                                       : null;
@@ -234,7 +231,7 @@ export default function ProfilePage() {
             };
             await upsertUserData(user.uid, {
                 ...fetchedData,
-                isAnonymous: false, // Explicitly set as non-anonymous
+                isAnonymous: false, 
             });
           }
           setUserProfile(fetchedData);
@@ -289,13 +286,10 @@ export default function ProfilePage() {
     try {
       const dataToUpdate: Partial<UserProfileData> = {
         name: values.name,
-        imageUrl: values.imageUrl || null, // This will be the Data URL if image was uploaded
+        imageUrl: values.imageUrl || null, 
         age: values.age !== undefined ? Number(values.age) : null,
-        // email and phoneNumber are primarily managed during auth or through specific verification flows
-        // For profile update, we're mainly concerned with display name, image, age.
-        // phoneNumber is read-only here as per previous logic.
-        email: userProfile.email, // Keep existing email (dummy email)
-        phoneNumber: userProfile.phoneNumber, // Keep existing phone number
+        email: userProfile.email, 
+        phoneNumber: userProfile.phoneNumber, 
       };
 
       await upsertUserData(currentUser.uid, dataToUpdate);
@@ -315,7 +309,6 @@ export default function ProfilePage() {
         return;
     }
     try {
-        // Use the dummy email for re-authentication
         await reauthenticateUser(currentUser, userProfile.email, values.currentPassword);
         await updateUserPassword(currentUser, values.newPassword);
         toast({ title: t.passwordUpdateSuccess });
@@ -379,7 +372,7 @@ export default function ProfilePage() {
               className="rounded-full object-cover border-4 border-accent mx-auto mb-4"
               data-ai-hint="user profile picture"
               onError={(e: FormEvent<HTMLImageElement>) => {
-                (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png'; // Fallback placeholder
+                (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png'; 
                 (e.target as HTMLImageElement).alt = 'Placeholder User Image';
               }}
             />
@@ -592,4 +585,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
