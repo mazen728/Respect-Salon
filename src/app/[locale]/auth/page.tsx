@@ -9,6 +9,7 @@ import * as z from "zod";
 import { auth, upsertUserData } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError, onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
+import { salonInfo as getSalonInfo } from '@/lib/mockData';
 
 
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,8 @@ const translations = {
     firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem. Please check your Firestore security rules.",
     checkingAuth: "Checking authentication status...",
     alreadyLoggedIn: "You are already logged in. Redirecting to profile...",
+    forgotPasswordContactSupportPrefix: "If you forgot your password, please contact ",
+    technicalSupportLinkText: "technical support",
   },
   ar: {
     pageTitle: "الوصول إلى الحساب",
@@ -121,6 +124,8 @@ const translations = {
     firestorePermissionsError: "تعذر حفظ معلومات ملفك الشخصي بسبب مشكلات في أذونات قاعدة البيانات. هذه مشكلة في إعدادات الخادم. يرجى التحقق من قواعد الأمان في Firestore.",
     checkingAuth: "جارٍ التحقق من حالة المصادقة...",
     alreadyLoggedIn: "أنت مسجل الدخول بالفعل. يتم توجيهك إلى الملف الشخصي...",
+    forgotPasswordContactSupportPrefix: "في حال نسيت كلمة السر، يرجى ",
+    technicalSupportLinkText: "التحدث مع الدعم الفني",
   },
 };
 
@@ -139,6 +144,7 @@ export default function AuthPage() {
 
 
   const t = translations[locale] || translations.en;
+  const salonInfoData = getSalonInfo(locale);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -260,6 +266,7 @@ export default function AuthPage() {
         isAnonymous: false,
       });
       toast({ title: t.createAccountSuccess, description: t.createAccountSuccessDesc });
+      router.push(`/${locale}/profile`);
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'create');
     }
@@ -271,6 +278,7 @@ export default function AuthPage() {
       const userCredential = await signInWithEmailAndPassword(auth, dummyEmail, values.password);
       await upsertUserData(userCredential.user.uid, { email: dummyEmail, phoneNumber: values.phone });
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
+      router.push(`/${locale}/profile`);
     } catch (error) {
       handleAuthError(error as AuthError | Error, 'login');
     }
@@ -446,6 +454,18 @@ export default function AuthPage() {
                   </Button>
                 </form>
               </Form>
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                {t.forgotPasswordContactSupportPrefix}
+                <a
+                  href={salonInfoData.whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-accent hover:text-accent/80 underline"
+                >
+                  {t.technicalSupportLinkText}
+                </a>
+                {locale === 'en' ? '.' : ''}
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
