@@ -10,14 +10,14 @@ import * as z from "zod";
 
 import { auth, db, upsertUserData } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged, updatePassword, type User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, updatePassword, signOut, type User as FirebaseUser } from 'firebase/auth';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff, Image as ImageIcon, CalendarDays, X } from 'lucide-react';
+import { UserCircle, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff, Image as ImageIcon, CalendarDays, X, LogOut } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -72,6 +72,9 @@ const translations = {
     phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
     phoneRequired: "Phone number is required.",
     genericError: "An unexpected error occurred. Please try again.",
+    logoutButton: "Log Out",
+    logoutSuccess: "Logged Out Successfully",
+    logoutError: "Failed to Log Out",
   },
   ar: {
     pageTitle: "ملفك الشخصي",
@@ -115,6 +118,9 @@ const translations = {
     phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
     phoneRequired: "رقم الهاتف مطلوب.",
     genericError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
+    logoutButton: "تسجيل الخروج",
+    logoutSuccess: "تم تسجيل الخروج بنجاح",
+    logoutError: "فشل تسجيل الخروج",
   }
 };
 
@@ -189,11 +195,9 @@ export default function ProfilePage() {
               phoneNumber: fetchedData.phoneNumber || "",
             });
           } else {
-            // Fallback if user doc doesn't exist, though upsertUserData should prevent this
              setUserProfile({ 
                 name: user.displayName, 
-                // email: user.email, // Not displaying dummy email
-                email: null, // Explicitly set to null as we don't want to show dummy
+                email: null,
                 imageUrl: user.photoURL, 
                 age: null, 
                 phoneNumber: user.phoneNumber 
@@ -251,6 +255,17 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({ title: t.profileUpdatedError, description: error instanceof Error ? error.message : String(error), variant: "destructive" });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: t.logoutSuccess });
+      router.push(`/${locale}/auth`);
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({ title: t.logoutError, description: error instanceof Error ? error.message : String(error), variant: "destructive" });
     }
   };
 
@@ -445,6 +460,17 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="mt-12 text-center">
+        <Button 
+          variant="destructive" 
+          onClick={handleLogout}
+          className="w-full max-w-xs mx-auto"
+        >
+          <LogOut className="h-5 w-5 me-2" />
+          {t.logoutButton}
+        </Button>
       </div>
     </div>
   );
