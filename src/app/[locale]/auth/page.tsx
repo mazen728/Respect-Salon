@@ -68,7 +68,7 @@ const translations = {
     phoneRequired: "Phone number is required.",
     configurationNotFound: "Firebase auth configuration not found. Please ensure sign-in methods are enabled in Firebase console.",
     firestoreError: "Database Error",
-    firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem.",
+    firestorePermissionsError: "Could not save your profile information due to database permission issues. This is a server-side configuration problem. Please check your Firestore security rules.",
   },
   ar: {
     pageTitle: "الوصول إلى الحساب",
@@ -112,7 +112,7 @@ const translations = {
     phoneRequired: "رقم الهاتف مطلوب.",
     configurationNotFound: "لم يتم العثور على تكوين المصادقة في Firebase. يرجى التأكد من تفعيل أساليب تسجيل الدخول في لوحة تحكم Firebase.",
     firestoreError: "خطأ في قاعدة البيانات",
-    firestorePermissionsError: "تعذر حفظ معلومات ملفك الشخصي بسبب مشكلات في أذونات قاعدة البيانات. هذه مشكلة في إعدادات الخادم.",
+    firestorePermissionsError: "تعذر حفظ معلومات ملفك الشخصي بسبب مشكلات في أذونات قاعدة البيانات. هذه مشكلة في إعدادات الخادم. يرجى التحقق من قواعد الأمان في Firestore.",
   },
 };
 
@@ -175,9 +175,9 @@ export default function AuthPage() {
     let title = t.authError;
     let description = t.genericError;
 
-    if ('code' in error && typeof (error as any).code === 'string') { // It's likely an AuthError
+    if ('code' in error && typeof (error as any).code === 'string') { 
       const authError = error as AuthError;
-      title = t.authError; // Default title for Auth errors
+      title = t.authError; 
       switch (authError.code) {
         case 'auth/email-already-in-use':
           description = t.emailInUse;
@@ -208,10 +208,10 @@ export default function AuthPage() {
             description = authError.message;
           }
       }
-    } else if (error.message.includes('Firestore: Missing or insufficient permissions')) {
+    } else if (error.message && (error.message.includes('Firestore: Missing or insufficient permissions') || error.message.includes('permission-denied'))) {
       title = t.firestoreError;
       description = t.firestorePermissionsError;
-    } else if (error.message) { // Generic error message
+    } else if (error.message) { 
         description = error.message;
     }
 
@@ -221,9 +221,8 @@ export default function AuthPage() {
   async function onLoginSubmit(values: LoginFormValues) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      // Optionally, update lastLoginAt or other minimal data
       await upsertUserData(userCredential.user.uid, { 
-        email: userCredential.user.email, // Pass email to ensure it's stored if not already
+        email: userCredential.user.email, 
       });
       toast({ title: t.loginSuccess, description: t.loginSuccessDesc });
       router.push(`/${locale}/profile`);
@@ -418,4 +417,6 @@ export default function AuthPage() {
     </div>
   );
 }
+    
+
     
