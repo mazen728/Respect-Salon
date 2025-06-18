@@ -1,7 +1,17 @@
 
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
-import { getAuth, sendPasswordResetEmail as firebaseSendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, type UserCredential } from 'firebase/auth';
+import { 
+  getAuth, 
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updatePassword as firebaseUpdatePassword,
+  type UserCredential,
+  type User as FirebaseUser
+} from 'firebase/auth';
 import { getFirestore, collection, getDocs, writeBatch, query, where, limit, doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { getAnalytics, isSupported } from "firebase/analytics";
 import type { Barber, Locale, Promotion, UserProfileData } from './types';
@@ -54,12 +64,11 @@ export async function upsertUserData(uid: string, data: Partial<UserProfileData>
     };
 
     const payload: any = {};
-    // Only include fields that are explicitly passed (not undefined)
-    if (data.email !== undefined) payload.email = data.email;
+    if (data.email !== undefined) payload.email = data.email; // Dummy email
     if (data.name !== undefined) payload.name = data.name;
-    if (data.imageUrl !== undefined) payload.imageUrl = data.imageUrl;
-    if (data.age !== undefined) payload.age = data.age; // Age is kept if user provides it
-    if (data.phoneNumber !== undefined) payload.phoneNumber = data.phoneNumber; // Phone is kept if user provides it
+    if (data.imageUrl !== undefined) payload.imageUrl = data.imageUrl; // Will likely be null or user-uploaded
+    if (data.age !== undefined) payload.age = data.age;
+    if (data.phoneNumber !== undefined) payload.phoneNumber = data.phoneNumber;
     if (data.isAnonymous !== undefined) payload.isAnonymous = data.isAnonymous;
 
 
@@ -87,30 +96,25 @@ export async function upsertUserData(uid: string, data: Partial<UserProfileData>
   }
 }
 
-// Function to sign in with Google
-export async function signInWithGoogle(): Promise<UserCredential> {
-  const provider = new GoogleAuthProvider();
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-    // Upsert user data to Firestore
-    await upsertUserData(user.uid, {
-      name: user.displayName,
-      email: user.email,
-      imageUrl: user.photoURL,
-      isAnonymous: false,
-      phoneNumber: user.phoneNumber || null, // Google might provide phone, otherwise null
-      // Age is not provided by Google, so it won't be set here unless already in Firestore
-    });
-    return result;
-  } catch (error: any) {
-    console.error("Error during Google sign-in:", error);
-    // Handle specific errors like popup closed by user, etc.
-    if (error.code === 'auth/popup-closed-by-user') {
-      throw new Error("Sign-in popup closed by user.");
-    }
-    throw error; // Re-throw other errors
-  }
+// Function to create user with email (dummy) and password
+export async function createUserWithEmailAndPasswordAuth(email: string, password: string): Promise<UserCredential> {
+  return createUserWithEmailAndPassword(auth, email, password);
+}
+
+// Function to sign in user with email (dummy) and password
+export async function signInWithEmailAndPasswordAuth(email: string, password: string): Promise<UserCredential> {
+  return signInWithEmailAndPassword(auth, email, password);
+}
+
+// Function to re-authenticate user
+export async function reauthenticateUser(user: FirebaseUser, currentPasswordDummmyEmail: string, currentActualPasswordVal: string): Promise<void> {
+  const credential = EmailAuthProvider.credential(currentPasswordDummmyEmail, currentActualPasswordVal);
+  return reauthenticateWithCredential(user, credential);
+}
+
+// Function to update user's password
+export async function updateUserPassword(user: FirebaseUser, newPasswordVal: string): Promise<void> {
+  return firebaseUpdatePassword(user, newPasswordVal);
 }
 
 
@@ -337,7 +341,6 @@ export async function seedPromotionsData(): Promise<string> {
 }
 
 // Function to find user by phone number (primarily to get their dummy email for password reset)
-// This function might be less relevant or deprecated with Google Sign-In
 export async function findUserByPhoneNumber(phoneNumber: string): Promise<{ uid: string, email: string | null } | null> {
   if (!firebaseConfig.projectId) {
     console.warn("Firebase project ID not configured. Cannot search for user by phone number.");
@@ -356,7 +359,7 @@ export async function findUserByPhoneNumber(phoneNumber: string): Promise<{ uid:
     const userData = userDoc.data();
     return {
       uid: userDoc.id,
-      email: userData.email || null, 
+      email: userData.email || null, // This should be the dummy email
     };
   } catch (error) {
     console.error(`Error finding user by phone number ${phoneNumber}:`, error);
@@ -364,7 +367,7 @@ export async function findUserByPhoneNumber(phoneNumber: string): Promise<{ uid:
   }
 }
 
-// Password reset functionality (might be less used or managed via Google)
+// Password reset functionality
 export async function sendPasswordResetEmail(email: string): Promise<void> {
     return firebaseSendPasswordResetEmail(auth, email);
 }
