@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { auth, db, upsertUserData, reauthenticateUser, updateUserPassword, sendPasswordResetEmail, findUserByPhoneNumber } from '@/lib/firebase';
+import { auth, db, upsertUserData, reauthenticateUser, updateUserPassword } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
@@ -17,21 +17,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Cake, Phone, Save, Edit3, Image as ImageIcon, CalendarDays, X, LogOut, Mail, KeyRound, ShieldCheck, Eye, EyeOff, ImagePlus, HelpCircle } from 'lucide-react';
+import { UserCircle, Cake, Phone, Save, Edit3, Image as ImageIcon, CalendarDays, X, LogOut, KeyRound, ShieldCheck, Eye, EyeOff, ImagePlus, XCircle } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-
 
 interface UserProfileData {
   name: string | null;
@@ -48,7 +36,6 @@ const translations = {
     personalInfo: "Personal Information",
     name: "Full Name",
     namePlaceholder: "e.g., John Doe",
-    email: "Registered Email (Internal)", 
     age: "Age",
     agePlaceholder: "e.g., 30",
     phoneNumber: "Phone Number",
@@ -56,6 +43,7 @@ const translations = {
     profilePicture: "Profile Picture",
     changeProfilePicture: "Change Profile Picture",
     uploadFromGallery: "Upload from Gallery",
+    deletePicture: "Delete Picture",
     imageUrlDesc: "Upload an image from your device's gallery. Max 2MB. (jpeg, png, gif, webp)",
     noName: "Not Provided",
     noAge: "Not Provided",
@@ -89,10 +77,10 @@ const translations = {
     reauthError: "Re-authentication failed. Please check your current password.",
     passwordMin: "Password must be at least 6 characters.",
     confirmPasswordMatch: "Passwords do not match.",
-    emailNonEditable: "Your registered identifier (based on phone number) cannot be changed here.",
     fileTooLarge: "File is too large. Max 2MB.",
     invalidFileType: "Invalid file type. Please select an image (jpeg, png, gif, webp).",
     uploadError: "Error uploading image. Please try again.",
+    imageRemoved: "Profile picture removed.",
   },
   ar: {
     pageTitle: "ملفك الشخصي",
@@ -100,7 +88,6 @@ const translations = {
     personalInfo: "المعلومات الشخصية",
     name: "الاسم الكامل",
     namePlaceholder: "مثال: جون دو",
-    email: "البريد المسجل (داخلي)",
     age: "العمر",
     agePlaceholder: "مثال: 30",
     phoneNumber: "رقم الهاتف",
@@ -108,6 +95,7 @@ const translations = {
     profilePicture: "الصورة الشخصية",
     changeProfilePicture: "تغيير الصورة الشخصية",
     uploadFromGallery: "تحميل من المعرض",
+    deletePicture: "حذف الصورة",
     imageUrlDesc: "قم بتحميل صورة من معرض جهازك. الحد الأقصى 2 ميجابايت. (jpeg, png, gif, webp)",
     noName: "غير متوفر",
     noAge: "غير متوفر",
@@ -141,10 +129,10 @@ const translations = {
     reauthError: "فشلت إعادة المصادقة. يرجى التحقق من كلمة مرورك الحالية.",
     passwordMin: "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.",
     confirmPasswordMatch: "كلمتا المرور الجديدتان غير متطابقتين.",
-    emailNonEditable: "معرف التسجيل الخاص بك (المبني على رقم الهاتف) لا يمكن تغييره هنا.",
     fileTooLarge: "الملف كبير جدًا. الحد الأقصى 2 ميجابايت.",
     invalidFileType: "نوع الملف غير صالح. الرجاء اختيار صورة (jpeg, png, gif, webp).",
     uploadError: "خطأ في تحميل الصورة. يرجى المحاولة مرة أخرى.",
+    imageRemoved: "تمت إزالة الصورة الشخصية.",
   }
 };
 
@@ -176,7 +164,7 @@ export default function ProfilePage() {
 
   const editProfileFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
-    imageUrl: z.string().optional().or(z.literal('')), // Keep allowing empty string for no image
+    imageUrl: z.string().optional().or(z.literal('')),
     age: z.preprocess(
       (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
       z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
@@ -222,7 +210,6 @@ export default function ProfilePage() {
 
           if (docSnap.exists()) {
             fetchedData = docSnap.data() as UserProfileData;
-            // Ensure email in fetchedData is the dummy email if phone-based auth
              if (!fetchedData.email || fetchedData.email !== (user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber))) {
                 fetchedData.email = user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber);
             }
@@ -232,12 +219,12 @@ export default function ProfilePage() {
                                       : null;
             fetchedData = { 
                 name: user.displayName || null, 
-                email: user.email || generateDummyEmailFromPhone(derivedPhoneNumber), // This will be the dummy email
+                email: user.email || generateDummyEmailFromPhone(derivedPhoneNumber), 
                 imageUrl: user.photoURL || null, 
                 age: null, 
                 phoneNumber: derivedPhoneNumber,
             };
-            await upsertUserData(user.uid, { // Ensure this upsertUserData also uses the dummy email logic if creating new
+            await upsertUserData(user.uid, { 
                 ...fetchedData,
                 isAnonymous: false, 
             });
@@ -268,7 +255,7 @@ export default function ProfilePage() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // Max 2MB
+      if (file.size > 2 * 1024 * 1024) { 
         toast({ variant: "destructive", title: t.uploadError, description: t.fileTooLarge });
         return;
       }
@@ -280,7 +267,6 @@ export default function ProfilePage() {
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Set the Data URL as the value for imageUrl
         editProfileForm.setValue('imageUrl', reader.result as string, { shouldValidate: true });
       };
       reader.onerror = () => {
@@ -290,10 +276,14 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteImage = () => {
+    editProfileForm.setValue('imageUrl', '', { shouldValidate: true });
+    toast({ title: t.imageRemoved });
+  };
+
   const handleEditProfileSubmit = async (values: EditProfileFormValues) => {
     if (!currentUser || !userProfile) return;
     try {
-      // When updating, ensure we pass the correct email (dummy email) to upsertUserData
       const dummyEmail = generateDummyEmailFromPhone(userProfile.phoneNumber);
       const dataToUpdate: Partial<UserProfileData> & { isAnonymous?: boolean } = {
         name: values.name,
@@ -316,12 +306,11 @@ export default function ProfilePage() {
   };
 
   const handlePasswordUpdate = async (values: UpdatePasswordFormValues) => {
-    if (!currentUser || !userProfile?.email) { // userProfile.email here is the dummy email
+    if (!currentUser || !userProfile?.email) { 
         toast({ title: t.passwordUpdateError, description: "User or user email not found.", variant: "destructive" });
         return;
     }
     try {
-        // Reauthenticate using the dummy email from userProfile (which should match auth.currentUser.email for phone users)
         await reauthenticateUser(currentUser, userProfile.email, values.currentPassword);
         await updateUserPassword(currentUser, values.newPassword);
         toast({ title: t.passwordUpdateSuccess });
@@ -435,15 +424,28 @@ export default function ProfilePage() {
                 
                 <FormItem>
                   <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.changeProfilePicture}</FormLabel>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button 
                       type="button" 
                       variant="outline" 
                       onClick={() => fileInputRef.current?.click()}
+                      className="flex-grow sm:flex-grow-0"
                     >
                       <ImagePlus className="me-2 h-4 w-4" />
                       {t.uploadFromGallery}
                     </Button>
+                    {editProfileForm.watch('imageUrl') && (
+                       <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="icon"
+                        onClick={handleDeleteImage}
+                        aria-label={t.deletePicture}
+                        title={t.deletePicture}
+                      >
+                        <XCircle className="h-5 w-5" />
+                      </Button>
+                    )}
                     <Input 
                       id="profileImageUpload"
                       ref={fileInputRef}
@@ -506,7 +508,6 @@ export default function ProfilePage() {
                  <span className='font-medium'>{t.phoneNumber}:</span>
                 <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.phoneNumber || t.noPhoneNumber}</span>
               </div>
-              {/* Email display removed from here */}
               <div className="flex items-center text-foreground">
                 <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
                 <span className='font-medium'>{t.age}:</span>
@@ -593,4 +594,3 @@ export default function ProfilePage() {
   );
 }
 
-    
