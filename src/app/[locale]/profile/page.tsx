@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { auth, db } from '@/lib/firebase';
+import { auth, db, upsertUserData } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, type User as FirebaseUser } from 'firebase/auth';
 
@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Mail, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff } from 'lucide-react'; // Changed KeyRound to Phone
+import { UserCircle, Mail, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff, Image as ImageIcon, CalendarDays, X } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -32,13 +32,19 @@ interface UserProfileData {
 const translations = {
   en: {
     pageTitle: "Your Profile",
-    pageDescription: "View your personal details and manage your account settings.",
+    pageDescription: "View and manage your personal details and account settings.",
     personalInfo: "Personal Information",
     name: "Full Name",
+    namePlaceholder: "e.g., John Doe",
     age: "Age",
+    agePlaceholder: "e.g., 30",
     emailAddress: "Email Address",
     phoneNumber: "Phone Number",
+    phonePlaceholder: "01xxxxxxxxx",
     profilePicture: "Profile Picture",
+    imageUrl: "Image URL (Optional)",
+    imageUrlPlaceholder: "https://example.com/your-image.png",
+    imageUrlDesc: "Link to your profile picture.",
     noName: "Not Provided",
     noAge: "Not Provided",
     noPhoneNumber: "Not Provided",
@@ -59,16 +65,33 @@ const translations = {
     userNotAuthenticated: "User not authenticated. Redirecting to login...",
     currentPasswordIncorrect: "Current password is incorrect.",
     tooManyRequests: "Too many recent attempts. Please try again later.",
+    editProfile: "Edit Profile",
+    saveChanges: "Save Changes",
+    cancel: "Cancel",
+    profileUpdatedSuccess: "Profile Updated Successfully",
+    profileUpdatedError: "Failed to Update Profile",
+    nameMin: "Name must be at least 2 characters.",
+    nameMax: "Name must be at most 50 characters.",
+    ageMin: "Age must be a positive number.",
+    ageMax: "Age seems too high.",
+    phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
+    phoneRequired: "Phone number is required.",
   },
   ar: {
     pageTitle: "ملفك الشخصي",
-    pageDescription: "عرض تفاصيلك الشخصية وإدارة إعدادات حسابك.",
+    pageDescription: "عرض وإدارة تفاصيلك الشخصية وإعدادات حسابك.",
     personalInfo: "المعلومات الشخصية",
     name: "الاسم الكامل",
+    namePlaceholder: "مثال: جون دو",
     age: "العمر",
+    agePlaceholder: "مثال: 30",
     emailAddress: "البريد الإلكتروني",
     phoneNumber: "رقم الهاتف",
+    phonePlaceholder: "01xxxxxxxxx",
     profilePicture: "الصورة الشخصية",
+    imageUrl: "رابط الصورة (اختياري)",
+    imageUrlPlaceholder: "https://example.com/your-image.png",
+    imageUrlDesc: "رابط لصورة ملفك الشخصي.",
     noName: "غير متوفر",
     noAge: "غير متوفر",
     noPhoneNumber: "غير متوفر",
@@ -89,6 +112,17 @@ const translations = {
     userNotAuthenticated: "المستخدم غير مصادق عليه. يتم التوجيه إلى صفحة تسجيل الدخول...",
     currentPasswordIncorrect: "كلمة المرور الحالية غير صحيحة.",
     tooManyRequests: "محاولات كثيرة مؤخرًا. يرجى المحاولة مرة أخرى لاحقًا.",
+    editProfile: "تعديل البيانات",
+    saveChanges: "حفظ التغييرات",
+    cancel: "إلغاء",
+    profileUpdatedSuccess: "تم تحديث الملف الشخصي بنجاح",
+    profileUpdatedError: "فشل تحديث الملف الشخصي",
+    nameMin: "يجب أن يتكون الاسم من حرفين على الأقل.",
+    nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
+    ageMin: "يجب أن يكون العمر رقمًا موجبًا.",
+    ageMax: "العمر يبدو كبيرًا جدًا.",
+    phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
+    phoneRequired: "رقم الهاتف مطلوب.",
   }
 };
 
@@ -102,12 +136,36 @@ export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const t = translations[locale] || translations.en;
+
+  const editProfileFormSchema = z.object({
+    name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
+    imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')),
+    age: z.preprocess(
+      (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
+      z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
+    ),
+    phoneNumber: z.string()
+      .min(1, { message: t.phoneRequired })
+      .regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength }),
+  });
+  type EditProfileFormValues = z.infer<typeof editProfileFormSchema>;
+
+  const editProfileForm = useForm<EditProfileFormValues>({
+    resolver: zodResolver(editProfileFormSchema),
+    defaultValues: {
+      name: "",
+      imageUrl: "",
+      age: undefined,
+      phoneNumber: "",
+    },
+  });
 
   const passwordFormSchema = z.object({
     currentPassword: z.string().min(1, { message: t.currentPassword }),
@@ -117,16 +175,11 @@ export default function ProfilePage() {
     message: t.passwordsDontMatch,
     path: ["confirmPassword"],
   });
-
   type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
-    defaultValues: {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    },
+    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   });
 
   useEffect(() => {
@@ -137,17 +190,17 @@ export default function ProfilePage() {
           const userDocRef = doc(db, "users", user.uid);
           const docSnap = await getDoc(userDocRef);
           if (docSnap.exists()) {
-            setUserProfile(docSnap.data() as UserProfileData);
-          } else {
-            console.warn("User document not found in Firestore for UID:", user.uid);
-            // Fallback if Firestore data is missing for some reason
-            setUserProfile({
-              name: user.displayName,
-              email: user.email,
-              imageUrl: user.photoURL,
-              age: null, // No age info from FirebaseUser directly
-              phoneNumber: user.phoneNumber,
+            const fetchedData = docSnap.data() as UserProfileData;
+            setUserProfile(fetchedData);
+            // Set form values when profile data is loaded
+            editProfileForm.reset({
+              name: fetchedData.name || "",
+              imageUrl: fetchedData.imageUrl || "",
+              age: fetchedData.age === null ? undefined : fetchedData.age, // Handle null age
+              phoneNumber: fetchedData.phoneNumber || "",
             });
+          } else {
+            setUserProfile({ name: user.displayName, email: user.email, imageUrl: user.photoURL, age: null, phoneNumber: user.phoneNumber });
           }
         } catch (e) {
           console.error("Error fetching user profile:", e);
@@ -160,18 +213,16 @@ export default function ProfilePage() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [router, locale, t]);
+  }, [router, locale, t, editProfileForm]); // Added editProfileForm to dependencies
 
   const handlePasswordUpdate = async (values: PasswordFormValues) => {
     if (!currentUser || !currentUser.email) {
       toast({ title: t.passwordUpdatedError, description: "User not properly authenticated.", variant: "destructive" });
       return;
     }
-
     try {
       const credential = EmailAuthProvider.credential(currentUser.email, values.currentPassword);
       await reauthenticateWithCredential(currentUser, credential);
-      
       await updatePassword(currentUser, values.newPassword);
       toast({ title: t.passwordUpdatedSuccess });
       passwordForm.reset();
@@ -188,15 +239,32 @@ export default function ProfilePage() {
     }
   };
 
+  const handleEditProfileSubmit = async (values: EditProfileFormValues) => {
+    if (!currentUser) return;
+    try {
+      await upsertUserData(currentUser.uid, {
+        name: values.name,
+        imageUrl: values.imageUrl || null,
+        age: values.age !== undefined ? Number(values.age) : null,
+        phoneNumber: values.phoneNumber,
+        // email is not updated here as it's part of auth record
+      });
+      setUserProfile(prev => prev ? { ...prev, ...values, age: values.age !== undefined ? Number(values.age) : null } : null);
+      toast({ title: t.profileUpdatedSuccess });
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({ title: t.profileUpdatedError, description: error instanceof Error ? error.message : String(error), variant: "destructive" });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <LoadingSpinner size={48} />
-        <p className="ms-4 text-lg">{t.loading}</p>
+        <LoadingSpinner size={48} /> <p className="ms-4 text-lg">{t.loading}</p>
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="container mx-auto py-12 px-4 text-center text-destructive">
@@ -207,14 +275,8 @@ export default function ProfilePage() {
       </div>
     );
   }
-  
   if (!currentUser || !userProfile) {
-     // Should be caught by isLoading or error state, but as a final fallback
-    return (
-      <div className="container mx-auto py-12 px-4 text-center">
-        <p>{t.userNotAuthenticated}</p>
-      </div>
-    );
+    return (<div className="container mx-auto py-12 px-4 text-center"><p>{t.userNotAuthenticated}</p></div>);
   }
 
   return (
@@ -222,58 +284,125 @@ export default function ProfilePage() {
       <div className="text-center mb-10">
         <UserCircle className="h-16 w-16 text-primary mx-auto mb-4" />
         <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary mb-3">{t.pageTitle}</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          {t.pageDescription}
-        </p>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t.pageDescription}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Profile Info/Edit Form Card */}
         <div className="md:col-span-1">
           <Card className="shadow-lg">
             <CardHeader className="items-center">
-              {userProfile.imageUrl ? (
+              {!isEditing && userProfile.imageUrl ? (
                 <Image
-                  src={userProfile.imageUrl}
-                  alt={t.profilePicture}
-                  width={128}
-                  height={128}
+                  src={userProfile.imageUrl} alt={t.profilePicture} width={128} height={128}
                   className="rounded-full object-cover border-4 border-accent"
                   data-ai-hint="user profile picture"
                   onError={(e: FormEvent<HTMLImageElement>) => {
-                     // Fallback if image fails to load
                     (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png';
                     (e.target as HTMLImageElement).alt = 'Placeholder User Image';
                   }}
                 />
-              ) : (
+              ) : !isEditing && (
                 <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center border-4 border-accent">
                   <UserCircle className="h-24 w-24 text-muted-foreground" />
                 </div>
               )}
-              <CardTitle className="font-headline text-2xl mt-4">{userProfile.name || t.noName}</CardTitle>
+              {!isEditing && <CardTitle className="font-headline text-2xl mt-4">{userProfile.name || t.noName}</CardTitle>}
             </CardHeader>
-            <CardContent className="text-center space-y-2">
-              <div className="flex items-center justify-center text-muted-foreground">
-                <Mail className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
-                <span>{userProfile.email || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-center text-muted-foreground">
-                <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
-                <span>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
-              </div>
-               <div className="flex items-center justify-center text-muted-foreground">
-                <Phone className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} /> 
-                <span>{userProfile.phoneNumber || t.noPhoneNumber}</span>
-              </div>
+            <CardContent className="space-y-3">
+              {isEditing ? (
+                <Form {...editProfileForm}>
+                  <form onSubmit={editProfileForm.handleSubmit(handleEditProfileSubmit)} className="space-y-4">
+                    <FormField
+                      control={editProfileForm.control} name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><UserCircle className="me-2 h-4 w-4 text-muted-foreground" />{t.name}</FormLabel>
+                          <FormControl><Input placeholder={t.namePlaceholder} {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editProfileForm.control} name="imageUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.imageUrl}</FormLabel>
+                          <FormControl><Input type="url" placeholder={t.imageUrlPlaceholder} {...field} /></FormControl>
+                          <FormDescription>{t.imageUrlDesc}</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editProfileForm.control} name="age"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><CalendarDays className="me-2 h-4 w-4 text-muted-foreground" />{t.age}</FormLabel>
+                          <FormControl><Input type="number" placeholder={t.agePlaceholder} {...field} onChange={event => field.onChange(event.target.value === '' ? undefined : +event.target.value)} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={editProfileForm.control} name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phoneNumber}</FormLabel>
+                          <FormControl><Input type="tel" placeholder={t.phonePlaceholder} {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex gap-2 pt-2">
+                      <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" disabled={editProfileForm.formState.isSubmitting}>
+                        {editProfileForm.formState.isSubmitting ? <LoadingSpinner size={20} className="me-2"/> : <Save className="h-5 w-5 me-2" /> }
+                        {t.saveChanges}
+                      </Button>
+                      <Button type="button" variant="outline" className="flex-1" onClick={() => {
+                        setIsEditing(false);
+                        // Reset form to original profile data
+                        editProfileForm.reset({
+                            name: userProfile.name || "",
+                            imageUrl: userProfile.imageUrl || "",
+                            age: userProfile.age === null ? undefined : userProfile.age,
+                            phoneNumber: userProfile.phoneNumber || "",
+                        });
+                      }}>
+                        <X className="h-5 w-5 me-2" />{t.cancel}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              ) : (
+                <>
+                  <div className="flex items-center text-muted-foreground">
+                    <Mail className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
+                    <span>{userProfile.email || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center text-muted-foreground">
+                    <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
+                    <span>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
+                  </div>
+                  <div className="flex items-center text-muted-foreground">
+                    <Phone className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
+                    <span>{userProfile.phoneNumber || t.noPhoneNumber}</span>
+                  </div>
+                  <Button onClick={() => setIsEditing(true)} className="w-full mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <Edit3 className="h-5 w-5 me-2" />{t.editProfile}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
 
+        {/* Password Settings Card */}
         <div className="md:col-span-2">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="font-headline text-2xl flex items-center">
-                <ShieldCheck className={`h-6 w-6 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} /> 
+                <ShieldCheck className={`h-6 w-6 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
                 {t.passwordSettings}
               </CardTitle>
               <CardDescription>{t.passwordSettingsDesc}</CardDescription>
@@ -282,8 +411,7 @@ export default function ProfilePage() {
               <Form {...passwordForm}>
                 <form onSubmit={passwordForm.handleSubmit(handlePasswordUpdate)} className="space-y-6">
                   <FormField
-                    control={passwordForm.control}
-                    name="currentPassword"
+                    control={passwordForm.control} name="currentPassword"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t.currentPassword}</FormLabel>
@@ -300,15 +428,14 @@ export default function ProfilePage() {
                     )}
                   />
                   <FormField
-                    control={passwordForm.control}
-                    name="newPassword"
+                    control={passwordForm.control} name="newPassword"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t.newPassword}</FormLabel>
                         <FormControl>
-                           <div className="relative">
+                          <div className="relative">
                             <Input type={showNewPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                             <Button type="button" variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
+                            <Button type="button" variant="ghost" size="icon" className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
                               {showNewPassword ? <EyeOff /> : <Eye />}
                             </Button>
                           </div>
@@ -318,8 +445,7 @@ export default function ProfilePage() {
                     )}
                   />
                   <FormField
-                    control={passwordForm.control}
-                    name="confirmPassword"
+                    control={passwordForm.control} name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t.confirmNewPassword}</FormLabel>
@@ -348,5 +474,4 @@ export default function ProfilePage() {
     </div>
   );
 }
-
     
