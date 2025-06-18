@@ -40,13 +40,13 @@ const translations = {
     age: "Age",
     agePlaceholder: "e.g., 30",
     phoneNumber: "Phone Number",
-    phonePlaceholder: "01xxxxxxxxx (Optional)",
+    phonePlaceholder: "01xxxxxxxxx",
     profilePicture: "Profile Picture",
     changeProfilePicture: "Change Profile Picture",
     uploadFromGallery: "Upload from Gallery",
-    imageUrl: "Image URL (Optional)",
+    imageUrl: "Image URL (Optional)", // This key is for schema message, description text is updated below
     imageUrlPlaceholder: "https://example.com/your-image.png",
-    imageUrlDesc: "Enter a valid image URL or upload an image.",
+    imageUrlDesc: "Upload an image from your gallery. Max 2MB. (jpeg, png, gif, webp)", // UPDATED
     noName: "Not Provided",
     noAge: "Not Provided",
     noPhoneNumber: "Not Provided",
@@ -63,7 +63,8 @@ const translations = {
     nameMax: "Name must be at most 50 characters.",
     ageMin: "Age must be a positive number.",
     ageMax: "Age seems too high.",
-    phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015 if provided.",
+    phoneInvalidPrefixOrLength: "Phone number must be 11 digits and start with 010, 011, 012, or 015.",
+    phoneRequired: "Phone number is required.",
     genericError: "An unexpected error occurred. Please try again.",
     logoutButton: "Log Out",
     logoutSuccess: "Logged Out Successfully",
@@ -78,7 +79,7 @@ const translations = {
     passwordUpdateError: "Failed to Update Password",
     reauthError: "Re-authentication failed. Please check your current password.",
     passwordMin: "Password must be at least 6 characters.",
-    confirmPasswordMatch: "New passwords do not match.",
+    confirmPasswordMatch: "Passwords do not match.",
     emailNonEditable: "Your registered identifier (based on phone number) cannot be changed here.",
     fileTooLarge: "File is too large. Max 2MB.",
     invalidFileType: "Invalid file type. Please select an image (jpeg, png, gif, webp).",
@@ -94,13 +95,13 @@ const translations = {
     age: "العمر",
     agePlaceholder: "مثال: 30",
     phoneNumber: "رقم الهاتف",
-    phonePlaceholder: "01xxxxxxxxx (اختياري)",
+    phonePlaceholder: "01xxxxxxxxx",
     profilePicture: "الصورة الشخصية",
     changeProfilePicture: "تغيير الصورة الشخصية",
     uploadFromGallery: "تحميل من المعرض",
-    imageUrl: "رابط الصورة (اختياري)",
+    imageUrl: "رابط الصورة (اختياري)", // This key is for schema message, description text is updated below
     imageUrlPlaceholder: "https://example.com/your-image.png",
-    imageUrlDesc: "أدخل رابط صورة صالح أو قم بتحميل صورة.",
+    imageUrlDesc: "قم بتحميل صورة من معرض جهازك. الحد الأقصى 2 ميجابايت. (jpeg, png, gif, webp)", // UPDATED
     noName: "غير متوفر",
     noAge: "غير متوفر",
     noPhoneNumber: "غير متوفر",
@@ -117,7 +118,8 @@ const translations = {
     nameMax: "يجب ألا يتجاوز الاسم 50 حرفًا.",
     ageMin: "يجب أن يكون العمر رقمًا موجبًا.",
     ageMax: "العمر يبدو كبيرًا جدًا.",
-    phoneInvalidPrefixOrLength: "إذا تم توفيره، يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
+    phoneInvalidPrefixOrLength: "يجب أن يتكون رقم الهاتف من 11 رقمًا وأن يبدأ بـ 010 أو 011 أو 012 أو 015.",
+    phoneRequired: "رقم الهاتف مطلوب.",
     genericError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
     logoutButton: "تسجيل الخروج",
     logoutSuccess: "تم تسجيل الخروج بنجاح",
@@ -168,16 +170,17 @@ export default function ProfilePage() {
 
   const editProfileFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
-    email: z.string().email().optional(), 
+    // imageUrl is now primarily for Data URLs from upload or empty. It's still a URL.
     imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')),
     age: z.preprocess(
       (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
       z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
     ),
     phoneNumber: z.string()
-      .optional()
-      .or(z.literal(''))
-      .refine(val => !val || /^(010|011|012|015)\d{8}$/.test(val), { message: t.phoneInvalidPrefixOrLength }),
+      .min(11, { message: t.phoneInvalidPrefixOrLength })
+      .max(11, { message: t.phoneInvalidPrefixOrLength })
+      .regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength })
+      .or(z.literal('')), 
   });
   
   const updatePasswordFormSchema = z.object({
@@ -194,7 +197,7 @@ export default function ProfilePage() {
 
   const editProfileForm = useForm<EditProfileFormValues>({
     resolver: zodResolver(editProfileFormSchema),
-    defaultValues: { name: "", email: "", imageUrl: "", age: undefined, phoneNumber: "" },
+    defaultValues: { name: "", imageUrl: "", age: undefined, phoneNumber: "" },
   });
 
   const updatePasswordForm = useForm<UpdatePasswordFormValues>({
@@ -213,25 +216,30 @@ export default function ProfilePage() {
 
           if (docSnap.exists()) {
             fetchedData = docSnap.data() as UserProfileData;
+             // Ensure email in fetchedData matches dummy email if user was created with phone
+            if (!fetchedData.email || fetchedData.email !== (user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber))) {
+                fetchedData.email = user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber);
+            }
           } else {
+            // This case should be rare if auth page always calls upsertUserData on creation
+            const derivedPhoneNumber = user.email?.startsWith('user-') && user.email.includes('@auth.local') 
+                                      ? user.email.substring(5, user.email.indexOf('@auth.local')) 
+                                      : null;
             fetchedData = { 
                 name: user.displayName || null, 
-                email: user.email, 
+                email: user.email || generateDummyEmailFromPhone(derivedPhoneNumber), 
                 imageUrl: user.photoURL || null, 
                 age: null, 
-                phoneNumber: user.email?.startsWith('user-') && user.email.includes('@auth.local') 
-                               ? user.email.substring(5, user.email.indexOf('@auth.local')) 
-                               : (user.phoneNumber || null),
+                phoneNumber: derivedPhoneNumber,
             };
             await upsertUserData(user.uid, {
                 ...fetchedData,
-                phoneNumber: fetchedData.phoneNumber 
+                isAnonymous: false, // Explicitly set as non-anonymous
             });
           }
           setUserProfile(fetchedData);
           editProfileForm.reset({
             name: fetchedData.name || "",
-            email: fetchedData.email || generateDummyEmailFromPhone(fetchedData.phoneNumber),
             imageUrl: fetchedData.imageUrl || "",
             age: fetchedData.age === null ? undefined : fetchedData.age,
             phoneNumber: fetchedData.phoneNumber || "",
@@ -281,9 +289,13 @@ export default function ProfilePage() {
     try {
       const dataToUpdate: Partial<UserProfileData> = {
         name: values.name,
-        imageUrl: values.imageUrl || null,
+        imageUrl: values.imageUrl || null, // This will be the Data URL if image was uploaded
         age: values.age !== undefined ? Number(values.age) : null,
-        email: userProfile.email, 
+        // email and phoneNumber are primarily managed during auth or through specific verification flows
+        // For profile update, we're mainly concerned with display name, image, age.
+        // phoneNumber is read-only here as per previous logic.
+        email: userProfile.email, // Keep existing email (dummy email)
+        phoneNumber: userProfile.phoneNumber, // Keep existing phone number
       };
 
       await upsertUserData(currentUser.uid, dataToUpdate);
@@ -303,6 +315,7 @@ export default function ProfilePage() {
         return;
     }
     try {
+        // Use the dummy email for re-authentication
         await reauthenticateUser(currentUser, userProfile.email, values.currentPassword);
         await updateUserPassword(currentUser, values.newPassword);
         toast({ title: t.passwordUpdateSuccess });
@@ -312,7 +325,7 @@ export default function ProfilePage() {
         setShowConfirmNewPassword(false);
     } catch (error: any) {
         console.error("Error updating password:", error);
-        if (error.code === 'auth/wrong-password' || error.message.includes("INVALID_LOGIN_CREDENTIALS")) {
+        if (error.code === 'auth/wrong-password' || error.message.includes("INVALID_LOGIN_CREDENTIALS") || error.message.includes("auth/invalid-credential")) {
             toast({ title: t.reauthError, variant: "destructive" });
             updatePasswordForm.setError("currentPassword", { type: "manual", message: t.reauthError });
         } else {
@@ -366,7 +379,7 @@ export default function ProfilePage() {
               className="rounded-full object-cover border-4 border-accent mx-auto mb-4"
               data-ai-hint="user profile picture"
               onError={(e: FormEvent<HTMLImageElement>) => {
-                (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png';
+                (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png'; // Fallback placeholder
                 (e.target as HTMLImageElement).alt = 'Placeholder User Image';
               }}
             />
@@ -442,7 +455,7 @@ export default function ProfilePage() {
                   )}
                    <FormField
                       control={editProfileForm.control} name="imageUrl"
-                      render={({ field }) => <FormMessage />} // Only to show validation errors for imageUrl if any
+                      render={({ field }) => <FormMessage />} 
                     />
                   <FormDescription>{t.imageUrlDesc}</FormDescription>
                 </FormItem>
@@ -466,7 +479,6 @@ export default function ProfilePage() {
                     setIsEditing(false);
                     editProfileForm.reset({ 
                         name: userProfile.name || "",
-                        email: userProfile.email || generateDummyEmailFromPhone(userProfile.phoneNumber),
                         imageUrl: userProfile.imageUrl || "",
                         age: userProfile.age === null ? undefined : userProfile.age,
                         phoneNumber: userProfile.phoneNumber || "",
@@ -488,6 +500,12 @@ export default function ProfilePage() {
                 <Phone className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
                  <span className='font-medium'>{t.phoneNumber}:</span>
                 <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.phoneNumber || t.noPhoneNumber}</span>
+              </div>
+               <div className="flex items-center text-foreground">
+                <Mail className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
+                 <span className='font-medium'>{t.email}:</span>
+                <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.email || t.noEmail}</span>
+                 <span className="text-xs text-muted-foreground">({t.emailNonEditable})</span>
               </div>
               <div className="flex items-center text-foreground">
                 <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
@@ -575,4 +593,3 @@ export default function ProfilePage() {
   );
 }
 
-    
