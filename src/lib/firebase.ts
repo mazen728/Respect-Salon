@@ -94,29 +94,6 @@ export async function upsertUserData(uid: string, data: {
   }
 }
 
-// Function to check if a phone number already exists in Firestore
-export async function checkPhoneNumberExists(phoneNumber: string): Promise<boolean> {
-  if (!firebaseConfig.projectId) {
-    console.warn("Firebase project ID not configured. Phone number check skipped.");
-    // Depending on policy, you might want to throw an error or return true to prevent creation
-    return false;
-  }
-  try {
-    const usersRef = collection(db, 'users');
-    // Ensure that the phoneNumber field is correctly indexed in Firestore for efficient querying
-    const q = query(usersRef, where('phoneNumber', '==', phoneNumber), limit(1));
-    const querySnapshot = await getDocs(q);
-    return !querySnapshot.empty; // true if phone number exists
-  } catch (error) {
-    console.error("Error checking phone number in Firestore:", error);
-    // If the check fails (e.g., network issue, permissions for this specific query),
-    // rethrowing or returning true would prevent account creation which is safer.
-    // Returning false would allow creation even if check failed, potentially leading to duplicates.
-    throw new Error(`Firestore: Error checking phone number: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
-}
-
-
 // Function to fetch barbers from Firestore
 export async function fetchBarbersFromFirestore(locale: Locale): Promise<Barber[]> {
   if (!firebaseConfig.projectId) {
