@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useForm } from "react-hook-form";
@@ -17,13 +17,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Cake, Phone, Save, Edit3, Image as ImageIcon, CalendarDays, X, LogOut, Mail, KeyRound, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { UserCircle, Cake, Phone, Save, Edit3, Image as ImageIcon, CalendarDays, X, LogOut, Mail, KeyRound, ShieldCheck, Eye, EyeOff, ImagePlus } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface UserProfileData {
   name: string | null;
-  email: string | null; // Dummy email
+  email: string | null; 
   imageUrl: string | null;
   age: number | null;
   phoneNumber: string | null;
@@ -36,15 +36,17 @@ const translations = {
     personalInfo: "Personal Information",
     name: "Full Name",
     namePlaceholder: "e.g., John Doe",
-    email: "Registered Email (Internal)", // Emphasize it's internal
+    email: "Registered Email (Internal)", 
     age: "Age",
     agePlaceholder: "e.g., 30",
     phoneNumber: "Phone Number",
     phonePlaceholder: "01xxxxxxxxx (Optional)",
     profilePicture: "Profile Picture",
+    changeProfilePicture: "Change Profile Picture",
+    uploadFromGallery: "Upload from Gallery",
     imageUrl: "Image URL (Optional)",
     imageUrlPlaceholder: "https://example.com/your-image.png",
-    imageUrlDesc: "Link to your profile picture.",
+    imageUrlDesc: "Enter a valid image URL or upload an image.",
     noName: "Not Provided",
     noAge: "Not Provided",
     noPhoneNumber: "Not Provided",
@@ -78,6 +80,9 @@ const translations = {
     passwordMin: "Password must be at least 6 characters.",
     confirmPasswordMatch: "New passwords do not match.",
     emailNonEditable: "Your registered identifier (based on phone number) cannot be changed here.",
+    fileTooLarge: "File is too large. Max 2MB.",
+    invalidFileType: "Invalid file type. Please select an image (jpeg, png, gif, webp).",
+    uploadError: "Error uploading image. Please try again.",
   },
   ar: {
     pageTitle: "ملفك الشخصي",
@@ -91,9 +96,11 @@ const translations = {
     phoneNumber: "رقم الهاتف",
     phonePlaceholder: "01xxxxxxxxx (اختياري)",
     profilePicture: "الصورة الشخصية",
+    changeProfilePicture: "تغيير الصورة الشخصية",
+    uploadFromGallery: "تحميل من المعرض",
     imageUrl: "رابط الصورة (اختياري)",
     imageUrlPlaceholder: "https://example.com/your-image.png",
-    imageUrlDesc: "رابط لصورة ملفك الشخصي.",
+    imageUrlDesc: "أدخل رابط صورة صالح أو قم بتحميل صورة.",
     noName: "غير متوفر",
     noAge: "غير متوفر",
     noPhoneNumber: "غير متوفر",
@@ -127,11 +134,14 @@ const translations = {
     passwordMin: "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.",
     confirmPasswordMatch: "كلمتا المرور الجديدتان غير متطابقتين.",
     emailNonEditable: "معرف التسجيل الخاص بك (المبني على رقم الهاتف) لا يمكن تغييره هنا.",
+    fileTooLarge: "الملف كبير جدًا. الحد الأقصى 2 ميجابايت.",
+    invalidFileType: "نوع الملف غير صالح. الرجاء اختيار صورة (jpeg, png, gif, webp).",
+    uploadError: "خطأ في تحميل الصورة. يرجى المحاولة مرة أخرى.",
   }
 };
 
 const generateDummyEmailFromPhone = (phone: string | null | undefined) => {
-  if (!phone) return `unknown-user@auth.local`; // Fallback for safety
+  if (!phone) return `unknown-user@auth.local`; 
   return `user-${phone}@auth.local`;
 }
 
@@ -141,6 +151,7 @@ export default function ProfilePage() {
   const params = useParams();
   const locale = params.locale as Locale;
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
@@ -170,7 +181,7 @@ export default function ProfilePage() {
   });
   
   const updatePasswordFormSchema = z.object({
-    currentPassword: z.string().min(1, { message: t.passwordPlaceholder }), // Just needs to be non-empty
+    currentPassword: z.string().min(1, { message: t.passwordPlaceholder }), 
     newPassword: commonPasswordSchema,
     confirmNewPassword: commonPasswordSchema,
   }).refine(data => data.newPassword === data.confirmNewPassword, {
@@ -203,28 +214,24 @@ export default function ProfilePage() {
           if (docSnap.exists()) {
             fetchedData = docSnap.data() as UserProfileData;
           } else {
-            // Fallback if Firestore doc doesn't exist (e.g., signup process interrupted)
-            // Firebase Auth user object `user.email` will be the dummy email.
             fetchedData = { 
                 name: user.displayName || null, 
-                email: user.email, // This is the dummy email from Auth
+                email: user.email, 
                 imageUrl: user.photoURL || null, 
                 age: null, 
-                // Attempt to parse phone from dummy email if not in Firestore profile yet
                 phoneNumber: user.email?.startsWith('user-') && user.email.includes('@auth.local') 
                                ? user.email.substring(5, user.email.indexOf('@auth.local')) 
                                : (user.phoneNumber || null),
             };
-            // Attempt to save this initial data to Firestore (if it was missing)
             await upsertUserData(user.uid, {
                 ...fetchedData,
-                phoneNumber: fetchedData.phoneNumber // Ensure phoneNumber is passed correctly
+                phoneNumber: fetchedData.phoneNumber 
             });
           }
           setUserProfile(fetchedData);
           editProfileForm.reset({
             name: fetchedData.name || "",
-            email: fetchedData.email || generateDummyEmailFromPhone(fetchedData.phoneNumber), // Display dummy email
+            email: fetchedData.email || generateDummyEmailFromPhone(fetchedData.phoneNumber),
             imageUrl: fetchedData.imageUrl || "",
             age: fetchedData.age === null ? undefined : fetchedData.age,
             phoneNumber: fetchedData.phoneNumber || "",
@@ -242,25 +249,46 @@ export default function ProfilePage() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [router, locale, t, editProfileForm, toast]); // Added toast to dependencies
+  }, [router, locale, t, editProfileForm, toast]);
 
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // Max 2MB
+        toast({ variant: "destructive", title: t.uploadError, description: t.fileTooLarge });
+        return;
+      }
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        toast({ variant: "destructive", title: t.uploadError, description: t.invalidFileType });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        editProfileForm.setValue('imageUrl', reader.result as string, { shouldValidate: true });
+      };
+      reader.onerror = () => {
+        toast({ variant: "destructive", title: t.uploadError, description: "Could not read file." });
+      }
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleEditProfileSubmit = async (values: EditProfileFormValues) => {
     if (!currentUser || !userProfile) return;
     try {
-      // Email (dummy) is not updated from here, it's tied to phone number
-      // Phone number changes would require a more complex flow if it's the primary auth identifier
       const dataToUpdate: Partial<UserProfileData> = {
         name: values.name,
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
-        // phoneNumber: values.phoneNumber || null, // Not allowing phone change from here for simplicity
-        email: userProfile.email, // Keep existing dummy email
+        email: userProfile.email, 
       };
 
       await upsertUserData(currentUser.uid, dataToUpdate);
       
-      setUserProfile(prev => prev ? { ...prev, ...dataToUpdate } : null); // Update local state
+      setUserProfile(prev => prev ? { ...prev, ...dataToUpdate } : null); 
       toast({ title: t.profileUpdatedSuccess });
       setIsEditing(false);
     } catch (error) {
@@ -275,14 +303,10 @@ export default function ProfilePage() {
         return;
     }
     try {
-        // Re-authenticate the user
         await reauthenticateUser(currentUser, userProfile.email, values.currentPassword);
-        
-        // If re-authentication is successful, update the password
         await updateUserPassword(currentUser, values.newPassword);
-        
         toast({ title: t.passwordUpdateSuccess });
-        updatePasswordForm.reset(); // Clear form fields
+        updatePasswordForm.reset(); 
         setShowCurrentPassword(false);
         setShowNewPassword(false);
         setShowConfirmNewPassword(false);
@@ -330,13 +354,15 @@ export default function ProfilePage() {
   if (!currentUser || !userProfile) {
     return (<div className="container mx-auto py-12 px-4 text-center"><p>{t.userNotAuthenticated}</p></div>);
   }
+  
+  const displayImageUrl = editProfileForm.watch('imageUrl') || userProfile.imageUrl;
 
   return (
     <div className="container mx-auto py-12 px-4">
       <div className="text-center mb-10">
-        {userProfile.imageUrl ? (
+        {displayImageUrl ? (
             <Image
-              src={userProfile.imageUrl} alt={t.profilePicture} width={128} height={128}
+              src={displayImageUrl} alt={t.profilePicture} width={128} height={128}
               className="rounded-full object-cover border-4 border-accent mx-auto mb-4"
               data-ai-hint="user profile picture"
               onError={(e: FormEvent<HTMLImageElement>) => {
@@ -347,7 +373,7 @@ export default function ProfilePage() {
         ) : (
             <UserCircle className="h-32 w-32 text-primary mx-auto mb-4" />
         )}
-        <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary mb-3">{userProfile.name || t.noName}</h1>
+        <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary mb-3">{editProfileForm.watch('name') || userProfile.name || t.noName}</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{userProfile.phoneNumber || t.noPhoneNumber}</p>
       </div>
 
@@ -377,7 +403,7 @@ export default function ProfilePage() {
                   )}
                 />
                  <FormField
-                  control={editProfileForm.control} name="phoneNumber" // Changed from email
+                  control={editProfileForm.control} name="phoneNumber" 
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phoneNumber}</FormLabel>
@@ -387,17 +413,40 @@ export default function ProfilePage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={editProfileForm.control} name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.imageUrl}</FormLabel>
-                      <FormControl><Input type="url" placeholder={t.imageUrlPlaceholder} {...field} /></FormControl>
-                      <FormDescription>{t.imageUrlDesc}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
+                
+                <FormItem>
+                  <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.changeProfilePicture}</FormLabel>
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <ImagePlus className="me-2 h-4 w-4" />
+                      {t.uploadFromGallery}
+                    </Button>
+                    <Input 
+                      id="profileImageUpload"
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png, image/jpeg, image/gif, image/webp"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                  </div>
+                  {editProfileForm.watch('imageUrl') && (
+                    <div className="mt-2 text-xs text-muted-foreground truncate">
+                       {locale === 'ar' ? 'الصورة المحددة: ' : 'Selected: '} 
+                       {editProfileForm.watch('imageUrl')?.substring(0,50)}...
+                    </div>
                   )}
-                />
+                   <FormField
+                      control={editProfileForm.control} name="imageUrl"
+                      render={({ field }) => <FormMessage />} // Only to show validation errors for imageUrl if any
+                    />
+                  <FormDescription>{t.imageUrlDesc}</FormDescription>
+                </FormItem>
+
                 <FormField
                   control={editProfileForm.control} name="age"
                   render={({ field }) => (
@@ -445,19 +494,11 @@ export default function ProfilePage() {
                 <span className='font-medium'>{t.age}:</span>
                 <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
               </div>
-               {/* Optionally display dummy email for admin/debug, or hide it
-              <div className="flex items-center text-foreground">
-                <Mail className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
-                <span className='font-medium'>{t.email}:</span>
-                <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.email || t.noEmail}</span>
-              </div>
-              */}
             </>
           )}
         </CardContent>
       </Card>
 
-      {/* Password Settings Card */}
       <Card className="shadow-lg max-w-2xl mx-auto mb-8">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">{t.passwordSettings}</CardTitle>
@@ -524,7 +565,7 @@ export default function ProfilePage() {
           variant="destructive" 
           onClick={handleLogout}
           className="w-full max-w-xs mx-auto"
-          disabled={isLoading} // isLoading here refers to the initial page load
+          disabled={isLoading} 
         >
           <LogOut className="h-5 w-5 me-2" />
           {t.logoutButton}
@@ -533,3 +574,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
