@@ -17,13 +17,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Mail, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff, Image as ImageIcon, CalendarDays, X } from 'lucide-react';
+import { UserCircle, Cake, ShieldCheck, Phone, Save, Edit3, Eye, EyeOff, Image as ImageIcon, CalendarDays, X } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface UserProfileData {
   name: string | null;
-  email: string | null;
+  email: string | null; // Kept in interface for data structure consistency, but not displayed
   imageUrl: string | null;
   age: number | null;
   phoneNumber: string | null;
@@ -38,7 +38,6 @@ const translations = {
     namePlaceholder: "e.g., John Doe",
     age: "Age",
     agePlaceholder: "e.g., 30",
-    emailAddress: "Email Address",
     phoneNumber: "Phone Number",
     phonePlaceholder: "01xxxxxxxxx",
     profilePicture: "Profile Picture",
@@ -85,7 +84,6 @@ const translations = {
     namePlaceholder: "مثال: جون دو",
     age: "العمر",
     agePlaceholder: "مثال: 30",
-    emailAddress: "البريد الإلكتروني",
     phoneNumber: "رقم الهاتف",
     phonePlaceholder: "01xxxxxxxxx",
     profilePicture: "الصورة الشخصية",
@@ -192,14 +190,14 @@ export default function ProfilePage() {
           if (docSnap.exists()) {
             const fetchedData = docSnap.data() as UserProfileData;
             setUserProfile(fetchedData);
-            // Set form values when profile data is loaded
             editProfileForm.reset({
               name: fetchedData.name || "",
               imageUrl: fetchedData.imageUrl || "",
-              age: fetchedData.age === null ? undefined : fetchedData.age, // Handle null age
+              age: fetchedData.age === null ? undefined : fetchedData.age,
               phoneNumber: fetchedData.phoneNumber || "",
             });
           } else {
+            // Fallback if no Firestore document, though upsertUserData should create one
             setUserProfile({ name: user.displayName, email: user.email, imageUrl: user.photoURL, age: null, phoneNumber: user.phoneNumber });
           }
         } catch (e) {
@@ -213,15 +211,16 @@ export default function ProfilePage() {
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [router, locale, t, editProfileForm]); // Added editProfileForm to dependencies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, locale, t, editProfileForm]);
 
   const handlePasswordUpdate = async (values: PasswordFormValues) => {
-    if (!currentUser || !currentUser.email) {
-      toast({ title: t.passwordUpdatedError, description: "User not properly authenticated.", variant: "destructive" });
+    if (!currentUser || !userProfile?.email) { // Check userProfile.email as it contains the dummy email needed for re-auth
+      toast({ title: t.passwordUpdatedError, description: "User not properly authenticated or email missing.", variant: "destructive" });
       return;
     }
     try {
-      const credential = EmailAuthProvider.credential(currentUser.email, values.currentPassword);
+      const credential = EmailAuthProvider.credential(userProfile.email, values.currentPassword);
       await reauthenticateWithCredential(currentUser, credential);
       await updatePassword(currentUser, values.newPassword);
       toast({ title: t.passwordUpdatedSuccess });
@@ -247,7 +246,7 @@ export default function ProfilePage() {
         imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
         phoneNumber: values.phoneNumber,
-        // email is not updated here as it's part of auth record
+        // email is not updated here as it's managed internally
       });
       setUserProfile(prev => prev ? { ...prev, ...values, age: values.age !== undefined ? Number(values.age) : null } : null);
       toast({ title: t.profileUpdatedSuccess });
@@ -270,7 +269,7 @@ export default function ProfilePage() {
       <div className="container mx-auto py-12 px-4 text-center text-destructive">
         <p>{error}</p>
         <Button onClick={() => router.push(`/${locale}/auth`)} className="mt-4">
-          {locale === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to Login'}
+          {locale === 'ar' ? 'العودة لإنشاء حساب' : 'Back to Create Account'}
         </Button>
       </div>
     );
@@ -288,7 +287,6 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Profile Info/Edit Form Card */}
         <div className="md:col-span-1">
           <Card className="shadow-lg">
             <CardHeader className="items-center">
@@ -361,7 +359,6 @@ export default function ProfilePage() {
                       </Button>
                       <Button type="button" variant="outline" className="flex-1" onClick={() => {
                         setIsEditing(false);
-                        // Reset form to original profile data
                         editProfileForm.reset({
                             name: userProfile.name || "",
                             imageUrl: userProfile.imageUrl || "",
@@ -376,10 +373,7 @@ export default function ProfilePage() {
                 </Form>
               ) : (
                 <>
-                  <div className="flex items-center text-muted-foreground">
-                    <Mail className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
-                    <span>{userProfile.email || 'N/A'}</span>
-                  </div>
+                  {/* Email display removed */}
                   <div className="flex items-center text-muted-foreground">
                     <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-2' : 'me-2'}`} />
                     <span>{userProfile.age ? `${userProfile.age} ${locale === 'ar' ? 'سنة' : 'years old'}` : t.noAge}</span>
@@ -397,7 +391,6 @@ export default function ProfilePage() {
           </Card>
         </div>
 
-        {/* Password Settings Card */}
         <div className="md:col-span-2">
           <Card className="shadow-lg">
             <CardHeader>
