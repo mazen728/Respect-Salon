@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { auth, db, upsertUserData, reauthenticateUser, updateUserPassword } from '@/lib/firebase';
+import { auth, db, upsertUserData, reauthenticateUser, updateUserPassword, sendPasswordResetEmail, findUserByPhoneNumber } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
@@ -17,9 +17,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Cake, Phone, Save, Edit3, Image as ImageIcon, CalendarDays, X, LogOut, Mail, KeyRound, ShieldCheck, Eye, EyeOff, ImagePlus } from 'lucide-react';
+import { UserCircle, Cake, Phone, Save, Edit3, Image as ImageIcon, CalendarDays, X, LogOut, Mail, KeyRound, ShieldCheck, Eye, EyeOff, ImagePlus, HelpCircle } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 interface UserProfileData {
   name: string | null;
@@ -44,13 +56,10 @@ const translations = {
     profilePicture: "Profile Picture",
     changeProfilePicture: "Change Profile Picture",
     uploadFromGallery: "Upload from Gallery",
-    imageUrl: "Image URL (Optional)", 
-    imageUrlPlaceholder: "https://example.com/your-image.png",
     imageUrlDesc: "Upload an image from your device's gallery. Max 2MB. (jpeg, png, gif, webp)",
     noName: "Not Provided",
     noAge: "Not Provided",
     noPhoneNumber: "Not Provided",
-    noEmail: "Not Provided",
     loading: "Loading profile...",
     errorFetchingProfile: "Could not load profile data.",
     userNotAuthenticated: "User not authenticated. Redirecting...",
@@ -99,13 +108,10 @@ const translations = {
     profilePicture: "الصورة الشخصية",
     changeProfilePicture: "تغيير الصورة الشخصية",
     uploadFromGallery: "تحميل من المعرض",
-    imageUrl: "رابط الصورة (اختياري)",
-    imageUrlPlaceholder: "https://example.com/your-image.png",
     imageUrlDesc: "قم بتحميل صورة من معرض جهازك. الحد الأقصى 2 ميجابايت. (jpeg, png, gif, webp)",
     noName: "غير متوفر",
     noAge: "غير متوفر",
     noPhoneNumber: "غير متوفر",
-    noEmail: "غير متوفر",
     loading: "جارٍ تحميل الملف الشخصي...",
     errorFetchingProfile: "تعذر تحميل بيانات الملف الشخصي.",
     userNotAuthenticated: "المستخدم غير مصادق عليه. يتم التوجيه...",
@@ -170,7 +176,7 @@ export default function ProfilePage() {
 
   const editProfileFormSchema = z.object({
     name: z.string().min(2, { message: t.nameMin }).max(50, { message: t.nameMax }),
-    imageUrl: z.string().url({ message: t.imageUrlDesc }).optional().or(z.literal('')),
+    imageUrl: z.string().optional().or(z.literal('')), // Keep allowing empty string for no image
     age: z.preprocess(
       (val) => (val === "" || val === undefined || val === null ? undefined : Number(val)),
       z.number().positive({ message: t.ageMin }).max(120, { message: t.ageMax }).optional()
@@ -190,6 +196,7 @@ export default function ProfilePage() {
     message: t.confirmPasswordMatch,
     path: ["confirmNewPassword"],
   });
+
 
   type EditProfileFormValues = z.infer<typeof editProfileFormSchema>;
   type UpdatePasswordFormValues = z.infer<typeof updatePasswordFormSchema>;
@@ -215,21 +222,22 @@ export default function ProfilePage() {
 
           if (docSnap.exists()) {
             fetchedData = docSnap.data() as UserProfileData;
-            if (!fetchedData.email || fetchedData.email !== (user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber))) {
+            // Ensure email in fetchedData is the dummy email if phone-based auth
+             if (!fetchedData.email || fetchedData.email !== (user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber))) {
                 fetchedData.email = user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber);
             }
           } else {
-            const derivedPhoneNumber = user.email?.startsWith('user-') && user.email.includes('@auth.local') 
+             const derivedPhoneNumber = user.email?.startsWith('user-') && user.email.includes('@auth.local') 
                                       ? user.email.substring(5, user.email.indexOf('@auth.local')) 
                                       : null;
             fetchedData = { 
                 name: user.displayName || null, 
-                email: user.email || generateDummyEmailFromPhone(derivedPhoneNumber), 
+                email: user.email || generateDummyEmailFromPhone(derivedPhoneNumber), // This will be the dummy email
                 imageUrl: user.photoURL || null, 
                 age: null, 
                 phoneNumber: derivedPhoneNumber,
             };
-            await upsertUserData(user.uid, {
+            await upsertUserData(user.uid, { // Ensure this upsertUserData also uses the dummy email logic if creating new
                 ...fetchedData,
                 isAnonymous: false, 
             });
@@ -272,6 +280,7 @@ export default function ProfilePage() {
 
       const reader = new FileReader();
       reader.onloadend = () => {
+        // Set the Data URL as the value for imageUrl
         editProfileForm.setValue('imageUrl', reader.result as string, { shouldValidate: true });
       };
       reader.onerror = () => {
@@ -284,12 +293,15 @@ export default function ProfilePage() {
   const handleEditProfileSubmit = async (values: EditProfileFormValues) => {
     if (!currentUser || !userProfile) return;
     try {
-      const dataToUpdate: Partial<UserProfileData> = {
+      // When updating, ensure we pass the correct email (dummy email) to upsertUserData
+      const dummyEmail = generateDummyEmailFromPhone(userProfile.phoneNumber);
+      const dataToUpdate: Partial<UserProfileData> & { isAnonymous?: boolean } = {
         name: values.name,
         imageUrl: values.imageUrl || null, 
         age: values.age !== undefined ? Number(values.age) : null,
-        email: userProfile.email, 
-        phoneNumber: userProfile.phoneNumber, 
+        email: dummyEmail, 
+        phoneNumber: userProfile.phoneNumber,
+        isAnonymous: false,
       };
 
       await upsertUserData(currentUser.uid, dataToUpdate);
@@ -304,11 +316,12 @@ export default function ProfilePage() {
   };
 
   const handlePasswordUpdate = async (values: UpdatePasswordFormValues) => {
-    if (!currentUser || !userProfile?.email) {
+    if (!currentUser || !userProfile?.email) { // userProfile.email here is the dummy email
         toast({ title: t.passwordUpdateError, description: "User or user email not found.", variant: "destructive" });
         return;
     }
     try {
+        // Reauthenticate using the dummy email from userProfile (which should match auth.currentUser.email for phone users)
         await reauthenticateUser(currentUser, userProfile.email, values.currentPassword);
         await updateUserPassword(currentUser, values.newPassword);
         toast({ title: t.passwordUpdateSuccess });
@@ -414,7 +427,7 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phoneNumber}</FormLabel>
                       <FormControl><Input type="tel" placeholder={userProfile.phoneNumber || t.phonePlaceholder} {...field} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
-                       <FormDescription>{locale === 'ar' ? 'لا يمكن تغيير رقم الهاتف من هنا.' : 'Phone number cannot be changed here.'}</FormDescription>
+                       <FormDescription>{locale === 'ar' ? 'لا يمكن تغيير رقم الهاتف من هنا لأنه المعرف الرئيسي للحساب.' : 'Phone number cannot be changed as it is the main account identifier.'}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -440,10 +453,9 @@ export default function ProfilePage() {
                       onChange={handleImageUpload}
                     />
                   </div>
-                  {editProfileForm.watch('imageUrl') && (
+                  {editProfileForm.watch('imageUrl') && typeof editProfileForm.watch('imageUrl') === 'string' && (editProfileForm.watch('imageUrl') as string).startsWith('data:image') && (
                     <div className="mt-2 text-xs text-muted-foreground truncate">
-                       {locale === 'ar' ? 'الصورة المحددة: ' : 'Selected: '} 
-                       {editProfileForm.watch('imageUrl')?.substring(0,50)}...
+                       {locale === 'ar' ? 'تم اختيار صورة للمعالجة. ' : 'Image selected for processing. '} 
                     </div>
                   )}
                    <FormField
@@ -494,12 +506,7 @@ export default function ProfilePage() {
                  <span className='font-medium'>{t.phoneNumber}:</span>
                 <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.phoneNumber || t.noPhoneNumber}</span>
               </div>
-               <div className="flex items-center text-foreground">
-                <Mail className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
-                 <span className='font-medium'>{t.email}:</span>
-                <span className={`${locale === 'ar' ? 'me-2' : 'ms-2'}`}>{userProfile.email || t.noEmail}</span>
-                 <span className="text-xs text-muted-foreground">({t.emailNonEditable})</span>
-              </div>
+              {/* Email display removed from here */}
               <div className="flex items-center text-foreground">
                 <Cake className={`h-5 w-5 text-accent ${locale === 'ar' ? 'ms-3' : 'me-3'}`} />
                 <span className='font-medium'>{t.age}:</span>
@@ -585,3 +592,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
