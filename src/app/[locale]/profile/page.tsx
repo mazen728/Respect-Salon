@@ -17,13 +17,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle, Cake, Phone, Save, Edit3, Image as ImageIcon, CalendarDays, X, LogOut, KeyRound, ShieldCheck, Eye, EyeOff, ImagePlus, XCircle } from 'lucide-react';
+import { UserCircle, Cake, Phone, Save, Edit3, ImageIcon, CalendarDays, X, LogOut, KeyRound, ShieldCheck, Eye, EyeOff, ImagePlus, XCircle } from 'lucide-react';
 import type { Locale } from "@/lib/types";
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface UserProfileData {
   name: string | null;
-  email: string | null; 
+  email: string | null;
   imageUrl: string | null;
   age: number | null;
   phoneNumber: string | null;
@@ -48,6 +48,8 @@ const translations = {
     noName: "Not Provided",
     noAge: "Not Provided",
     noPhoneNumber: "Not Provided",
+    emailAddress: "Email Address",
+    noEmail: "Not Provided",
     loading: "Loading profile...",
     errorFetchingProfile: "Could not load profile data.",
     userNotAuthenticated: "User not authenticated. Redirecting...",
@@ -100,6 +102,8 @@ const translations = {
     noName: "غير متوفر",
     noAge: "غير متوفر",
     noPhoneNumber: "غير متوفر",
+    emailAddress: "البريد الإلكتروني",
+    noEmail: "غير متوفر",
     loading: "جارٍ تحميل الملف الشخصي...",
     errorFetchingProfile: "تعذر تحميل بيانات الملف الشخصي.",
     userNotAuthenticated: "المستخدم غير مصادق عليه. يتم التوجيه...",
@@ -137,7 +141,7 @@ const translations = {
 };
 
 const generateDummyEmailFromPhone = (phone: string | null | undefined) => {
-  if (!phone) return `unknown-user@auth.local`; 
+  if (!phone) return `unknown-user@auth.local`;
   return `user-${phone}@auth.local`;
 }
 
@@ -173,11 +177,11 @@ export default function ProfilePage() {
       .min(11, { message: t.phoneInvalidPrefixOrLength })
       .max(11, { message: t.phoneInvalidPrefixOrLength })
       .regex(/^(010|011|012|015)\d{8}$/, { message: t.phoneInvalidPrefixOrLength })
-      .or(z.literal('')), 
+      .or(z.literal('')),
   });
-  
+
   const updatePasswordFormSchema = z.object({
-    currentPassword: z.string().min(1, { message: t.passwordPlaceholder }), 
+    currentPassword: z.string().min(1, { message: t.passwordPlaceholder }),
     newPassword: commonPasswordSchema,
     confirmNewPassword: commonPasswordSchema,
   }).refine(data => data.newPassword === data.confirmNewPassword, {
@@ -198,7 +202,7 @@ export default function ProfilePage() {
     resolver: zodResolver(updatePasswordFormSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirmNewPassword: "" },
   });
-  
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -214,19 +218,23 @@ export default function ProfilePage() {
                 fetchedData.email = user.email || generateDummyEmailFromPhone(fetchedData.phoneNumber);
             }
           } else {
-             const derivedPhoneNumber = user.email?.startsWith('user-') && user.email.includes('@auth.local') 
-                                      ? user.email.substring(5, user.email.indexOf('@auth.local')) 
+             const derivedPhoneNumber = user.email?.startsWith('user-') && user.email.includes('@auth.local')
+                                      ? user.email.substring(5, user.email.indexOf('@auth.local'))
                                       : null;
-            fetchedData = { 
-                name: user.displayName || null, 
-                email: user.email || generateDummyEmailFromPhone(derivedPhoneNumber), 
-                imageUrl: user.photoURL || null, 
-                age: null, 
+            fetchedData = {
+                name: user.displayName || null,
+                email: user.email || generateDummyEmailFromPhone(derivedPhoneNumber),
+                imageUrl: user.photoURL || null,
+                age: null,
                 phoneNumber: derivedPhoneNumber,
             };
-            await upsertUserData(user.uid, { 
-                ...fetchedData,
-                isAnonymous: false, 
+            await upsertUserData(user.uid, {
+                name: fetchedData.name,
+                email: fetchedData.email,
+                // imageUrl: fetchedData.imageUrl, // Do not pass imageUrl here to prevent overwriting with null
+                age: fetchedData.age,
+                phoneNumber: fetchedData.phoneNumber,
+                isAnonymous: false,
             });
           }
           setUserProfile(fetchedData);
@@ -243,6 +251,8 @@ export default function ProfilePage() {
           toast({ variant: "destructive", title: t.errorFetchingProfile, description: e instanceof Error ? e.message : String(e) });
         }
       } else {
+        setCurrentUser(null);
+        setUserProfile(null);
         toast({ title: t.userNotAuthenticated, variant: "destructive" });
         router.push(`/${locale}/auth`);
       }
@@ -257,48 +267,67 @@ export default function ProfilePage() {
     if (file) {
       if (file.size > 0.5 * 1024 * 1024) { // Max 500KB
         toast({ variant: "destructive", title: t.uploadError, description: t.fileTooLarge });
+        if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
         return;
       }
       const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
       if (!validTypes.includes(file.type)) {
         toast({ variant: "destructive", title: t.uploadError, description: t.invalidFileType });
+        if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
         return;
       }
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        editProfileForm.setValue('imageUrl', reader.result as string, { shouldValidate: true });
+        editProfileForm.setValue('imageUrl', reader.result as string, { shouldValidate: true, shouldDirty: true });
       };
       reader.onerror = () => {
         toast({ variant: "destructive", title: t.uploadError, description: "Could not read file." });
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
       reader.readAsDataURL(file);
     }
   };
 
   const handleDeleteImage = () => {
-    editProfileForm.setValue('imageUrl', '', { shouldValidate: true });
+    editProfileForm.setValue('imageUrl', '', { shouldValidate: true, shouldDirty: true });
+    if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
     toast({ title: t.imageRemoved });
   };
 
   const handleEditProfileSubmit = async (values: EditProfileFormValues) => {
     if (!currentUser || !userProfile) return;
     try {
-      const dummyEmail = generateDummyEmailFromPhone(userProfile.phoneNumber);
       const dataToUpdate: Partial<UserProfileData> & { isAnonymous?: boolean } = {
         name: values.name,
-        imageUrl: values.imageUrl || null, 
+        imageUrl: values.imageUrl || null,
         age: values.age !== undefined ? Number(values.age) : null,
-        email: dummyEmail, 
-        phoneNumber: userProfile.phoneNumber, // Keep the original phone number from userProfile
         isAnonymous: false,
       };
 
-      await upsertUserData(currentUser.uid, dataToUpdate);
-      
-      setUserProfile(prev => prev ? { ...prev, ...dataToUpdate } : null); 
+      // Pass existing email and phone number to upsertUserData for context,
+      // especially if its internal logic might need them for a complete record.
+      // These fields are not directly editable in this form but are part of the UserProfileData structure.
+      await upsertUserData(currentUser.uid, {
+        ...dataToUpdate,
+        email: userProfile.email, // Current email from state
+        phoneNumber: userProfile.phoneNumber, // Current phone from state
+      });
+
+      setUserProfile(prev => {
+        if (!prev) return null;
+        // Create a new object for state update to ensure React detects the change
+        const updatedProfile = {
+            ...prev,
+            name: dataToUpdate.name !== undefined ? dataToUpdate.name : prev.name,
+            imageUrl: dataToUpdate.imageUrl !== undefined ? dataToUpdate.imageUrl : prev.imageUrl,
+            age: dataToUpdate.age !== undefined ? dataToUpdate.age : prev.age,
+        };
+        return updatedProfile;
+      });
       toast({ title: t.profileUpdatedSuccess });
       setIsEditing(false);
+      editProfileForm.reset(values); // Reset form with submitted values to clear dirty state
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({ title: t.profileUpdatedError, description: error instanceof Error ? error.message : String(error), variant: "destructive" });
@@ -306,7 +335,7 @@ export default function ProfilePage() {
   };
 
   const handlePasswordUpdate = async (values: UpdatePasswordFormValues) => {
-    if (!currentUser || !userProfile?.email) { 
+    if (!currentUser || !userProfile?.email) {
         toast({ title: t.passwordUpdateError, description: "User or user email not found.", variant: "destructive" });
         return;
     }
@@ -314,15 +343,15 @@ export default function ProfilePage() {
         await reauthenticateUser(currentUser, userProfile.email, values.currentPassword);
         await updateUserPassword(currentUser, values.newPassword);
         toast({ title: t.passwordUpdateSuccess });
-        updatePasswordForm.reset(); 
+        updatePasswordForm.reset();
         setShowCurrentPassword(false);
         setShowNewPassword(false);
         setShowConfirmNewPassword(false);
     } catch (error: any) {
         console.error("Error updating password:", error);
         if (error.code === 'auth/wrong-password' || error.message.includes("INVALID_LOGIN_CREDENTIALS") || error.message.includes("auth/invalid-credential")) {
-            toast({ title: t.reauthError, variant: "destructive" });
             updatePasswordForm.setError("currentPassword", { type: "manual", message: t.reauthError });
+            toast({ title: t.reauthError, variant: "destructive" });
         } else {
             toast({ title: t.passwordUpdateError, description: error.message || t.genericError, variant: "destructive" });
         }
@@ -334,6 +363,11 @@ export default function ProfilePage() {
     try {
       await signOut(auth);
       toast({ title: t.logoutSuccess });
+      // Clear local state as well
+      setCurrentUser(null);
+      setUserProfile(null);
+      editProfileForm.reset({ name: "", imageUrl: "", age: undefined, phoneNumber: "" });
+      updatePasswordForm.reset({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
       router.push(`/${locale}/auth`);
     } catch (error) {
       console.error("Error logging out:", error);
@@ -349,7 +383,7 @@ export default function ProfilePage() {
       </div>
     );
   }
-  if (error && !userProfile) { 
+  if (error && !userProfile) {
     return (
       <div className="container mx-auto py-12 px-4 text-center text-destructive">
         <p>{error}</p>
@@ -360,9 +394,11 @@ export default function ProfilePage() {
     );
   }
   if (!currentUser || !userProfile) {
-    return (<div className="container mx-auto py-12 px-4 text-center"><p>{t.userNotAuthenticated}</p></div>);
+    // This case should ideally be handled by the onAuthStateChanged listener redirecting.
+    // If somehow reached, show loading or a message.
+    return (<div className="flex justify-center items-center min-h-screen"><p>{t.loading}</p></div>);
   }
-  
+
   const displayImageUrl = editProfileForm.watch('imageUrl') || userProfile.imageUrl;
 
   return (
@@ -374,7 +410,7 @@ export default function ProfilePage() {
               className="rounded-full object-cover border-4 border-accent mx-auto mb-4"
               data-ai-hint="user profile picture"
               onError={(e: FormEvent<HTMLImageElement>) => {
-                (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png'; 
+                (e.target as HTMLImageElement).src = 'https://placehold.co/128x128.png';
                 (e.target as HTMLImageElement).alt = 'Placeholder User Image';
               }}
             />
@@ -390,7 +426,15 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center">
                 <CardTitle className="font-headline text-2xl">{t.personalInfo}</CardTitle>
                 {!isEditing && (
-                    <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <Button onClick={() => {
+                        editProfileForm.reset({ // Ensure form is reset with current profile data before editing
+                            name: userProfile.name || "",
+                            imageUrl: userProfile.imageUrl || "",
+                            age: userProfile.age === null ? undefined : userProfile.age,
+                            phoneNumber: userProfile.phoneNumber || "",
+                        });
+                        setIsEditing(true);
+                    }} variant="outline" size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">
                         <Edit3 className="h-4 w-4 me-2" />{t.editProfile}
                     </Button>
                 )}
@@ -411,33 +455,33 @@ export default function ProfilePage() {
                   )}
                 />
                  <FormField
-                  control={editProfileForm.control} name="phoneNumber" 
+                  control={editProfileForm.control} name="phoneNumber"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Phone className="me-2 h-4 w-4 text-muted-foreground" />{t.phoneNumber}</FormLabel>
-                      <FormControl><Input type="tel" placeholder={userProfile.phoneNumber || t.phonePlaceholder} {...field} value={userProfile.phoneNumber || ""} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
+                      <FormControl><Input type="tel" placeholder={userProfile.phoneNumber || t.phonePlaceholder} value={userProfile.phoneNumber || ""} readOnly className="bg-muted/50 cursor-not-allowed" /></FormControl>
                        <FormDescription>{locale === 'ar' ? 'لا يمكن تغيير رقم الهاتف من هنا لأنه المعرف الرئيسي للحساب.' : 'Phone number cannot be changed as it is the main account identifier.'}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <FormItem>
                   <FormLabel className="flex items-center"><ImageIcon className="me-2 h-4 w-4 text-muted-foreground" />{t.changeProfilePicture}</FormLabel>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={() => fileInputRef.current?.click()}
                       className="flex-grow sm:flex-grow-0"
                     >
                       <ImagePlus className="me-2 h-4 w-4" />
                       {t.uploadFromGallery}
                     </Button>
-                    {editProfileForm.watch('imageUrl') && (
-                       <Button 
-                        type="button" 
-                        variant="destructive" 
+                    {(editProfileForm.watch('imageUrl') || userProfile.imageUrl) && ( // Show delete if form has image or profile has image
+                       <Button
+                        type="button"
+                        variant="destructive"
                         size="icon"
                         onClick={handleDeleteImage}
                         aria-label={t.deletePicture}
@@ -446,7 +490,7 @@ export default function ProfilePage() {
                         <XCircle className="h-5 w-5" />
                       </Button>
                     )}
-                    <Input 
+                    <Input
                       id="profileImageUpload"
                       ref={fileInputRef}
                       type="file"
@@ -457,12 +501,12 @@ export default function ProfilePage() {
                   </div>
                   {editProfileForm.watch('imageUrl') && typeof editProfileForm.watch('imageUrl') === 'string' && (editProfileForm.watch('imageUrl') as string).startsWith('data:image') && (
                     <div className="mt-2 text-xs text-muted-foreground truncate">
-                       {locale === 'ar' ? 'تم اختيار صورة للمعالجة. ' : 'Image selected for processing. '} 
+                       {locale === 'ar' ? 'تم اختيار صورة للمعالجة. ' : 'Image selected for processing. '}
                     </div>
                   )}
                    <FormField
                       control={editProfileForm.control} name="imageUrl"
-                      render={() => <FormMessage />} 
+                      render={() => <FormMessage />}
                     />
                   <FormDescription>{t.imageUrlDesc}</FormDescription>
                 </FormItem>
@@ -478,18 +522,20 @@ export default function ProfilePage() {
                   )}
                 />
                 <div className="flex gap-2 pt-2">
-                  <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" disabled={editProfileForm.formState.isSubmitting}>
+                  <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90" disabled={editProfileForm.formState.isSubmitting || !editProfileForm.formState.isDirty}>
                     {editProfileForm.formState.isSubmitting ? <LoadingSpinner size={20} className="me-2"/> : <Save className="h-5 w-5 me-2" /> }
                     {t.saveChanges}
                   </Button>
                   <Button type="button" variant="outline" className="flex-1" onClick={() => {
                     setIsEditing(false);
-                    editProfileForm.reset({ 
+                    // Reset form to original userProfile data
+                    editProfileForm.reset({
                         name: userProfile.name || "",
                         imageUrl: userProfile.imageUrl || "",
                         age: userProfile.age === null ? undefined : userProfile.age,
                         phoneNumber: userProfile.phoneNumber || "",
                     });
+                     if (fileInputRef.current) fileInputRef.current.value = ""; // Clear file input on cancel
                   }}>
                     <X className="h-5 w-5 me-2" />{t.cancel}
                   </Button>
@@ -578,13 +624,13 @@ export default function ProfilePage() {
           </Form>
         </CardContent>
       </Card>
-      
+
       <div className="mt-12 text-center">
-        <Button 
-          variant="destructive" 
+        <Button
+          variant="destructive"
           onClick={handleLogout}
           className="w-full max-w-xs mx-auto"
-          disabled={isLoading} 
+          disabled={isLoading && !currentUser} // Disable if still initial loading and no user yet
         >
           <LogOut className="h-5 w-5 me-2" />
           {t.logoutButton}
